@@ -1,6 +1,7 @@
 import { getCurrentUser, createTakeover } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
+import { MAX_LENGTHS } from '../utils/authSecurity.js';
 
 export async function createPostTakeover() {
   const user = await getCurrentUser();
@@ -138,7 +139,20 @@ export async function createPostTakeover() {
 
   uploadArea.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', (e) => {
-    Array.from(e.target.files).forEach(file => {
+    const files = Array.from(e.target.files);
+    for (const file of files) {
+      if (!MAX_LENGTHS.allowedImageTypes.includes(file.type)) {
+        showToast(`Invalid file type: ${file.name}. Only JPG, PNG, WebP, GIF allowed.`, 'error');
+        continue;
+      }
+      if (file.size > MAX_LENGTHS.maxFileSize) {
+        showToast(`File too large: ${file.name}. Max 5MB per file.`, 'error');
+        continue;
+      }
+      if (uploadedImages.length >= MAX_LENGTHS.maxFiles) {
+        showToast(`Maximum ${MAX_LENGTHS.maxFiles} images allowed.`, 'error');
+        break;
+      }
       const reader = new FileReader();
       reader.onload = (ev) => {
         uploadedImages.push(ev.target.result);
@@ -153,7 +167,7 @@ export async function createPostTakeover() {
         previews.appendChild(preview);
       };
       reader.readAsDataURL(file);
-    });
+    }
   });
 
   // Submit
@@ -176,13 +190,17 @@ export async function createPostTakeover() {
       errEl.style.display = '';
       return;
     }
+    if (title.length > MAX_LENGTHS.title) { errEl.textContent = `Title must be under ${MAX_LENGTHS.title} characters`; errEl.style.display = ''; return; }
+    if (address.length > MAX_LENGTHS.address) { errEl.textContent = `Address must be under ${MAX_LENGTHS.address} characters`; errEl.style.display = ''; return; }
+    if (description.length > MAX_LENGTHS.description) { errEl.textContent = `Description must be under ${MAX_LENGTHS.description} characters`; errEl.style.display = ''; return; }
+    if (rules.length > MAX_LENGTHS.houseRules) { errEl.textContent = `House rules must be under ${MAX_LENGTHS.houseRules} characters`; errEl.style.display = ''; return; }
+    if (rent > MAX_LENGTHS.maxPrice || rent < 0) { errEl.textContent = 'Rent must be between 0 and 50,000,000'; errEl.style.display = ''; return; }
 
     const images = uploadedImages.length > 0 ? uploadedImages : ['/images/property_1.png', '/images/property_2.png'];
 
     await createTakeover({
       studentId: user.id,
       studentName: user.name,
-      studentPhone: user.phone,
       title, apartmentType: type, area, address, rent,
       leaseRemaining: lease,
       gateDistances: {

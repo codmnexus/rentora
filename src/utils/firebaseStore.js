@@ -11,8 +11,11 @@ import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    sendEmailVerification,
+    sendPasswordResetEmail
 } from 'firebase/auth';
+import { startSessionTimer, stopSessionTimer, sanitizeInput } from './authSecurity.js';
 
 // ---- Collection refs ----
 const COL = {
@@ -74,20 +77,35 @@ function genId() {
 }
 
 async function getAllDocs(colName) {
-    const snap = await getDocs(collection(db, colName));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    try {
+        const snap = await getDocs(collection(db, colName));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+        console.error(`[Rentora] Failed to fetch ${colName}:`, err.message);
+        return [];
+    }
 }
 
 async function getDocById(colName, id) {
-    const snap = await getDoc(doc(db, colName, id));
-    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    try {
+        const snap = await getDoc(doc(db, colName, id));
+        return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    } catch (err) {
+        console.error(`[Rentora] Failed to fetch ${colName}/${id}:`, err.message);
+        return null;
+    }
 }
 
 async function updateDocById(colName, id, updates) {
-    const ref = doc(db, colName, id);
-    await updateDoc(ref, updates);
-    const snap = await getDoc(ref);
-    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    try {
+        const ref = doc(db, colName, id);
+        await updateDoc(ref, updates);
+        const snap = await getDoc(ref);
+        return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    } catch (err) {
+        console.error(`[Rentora] Failed to update ${colName}/${id}:`, err.message);
+        return null;
+    }
 }
 
 // ---- Users ----
@@ -105,15 +123,26 @@ export async function createUser({ name, email, phone, password, role, ...extra 
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         const uid = cred.user.uid;
 
+        // Send email verification
+        try {
+            await sendEmailVerification(cred.user);
+        } catch (verifyErr) {
+            console.warn('[Rentora] Could not send verification email:', verifyErr.message);
+        }
+
         const userData = {
-            name, email, phone, role,
+            name: sanitizeInput(name),
+            email,
+            phone: sanitizeInput(phone),
+            role,
             ...extra,
             verified: role === 'admin',
+            emailVerified: false,
             avatar: name.charAt(0).toUpperCase(),
             createdAt: new Date().toISOString()
         };
 
-        // Store profile in Firestore (doc ID = auth uid)
+        // Store profile in Firestore (doc ID = auth uid) — never store password
         const { password: _, ...safeData } = { ...userData };
         await import('firebase/firestore').then(({ setDoc }) =>
             setDoc(doc(db, COL.USERS, uid), safeData)
@@ -122,9 +151,10 @@ export async function createUser({ name, email, phone, password, role, ...extra 
         const user = { id: uid, ...safeData };
         _currentUser = cred.user;
         _currentUserDoc = user;
-        return { user };
+        return { user, emailVerificationSent: true };
     } catch (err) {
         if (err.code === 'auth/email-already-in-use') return { error: 'Email already exists' };
+        if (err.code === 'auth/weak-password') return { error: 'Password is too weak. Use at least 6 characters.' };
         return { error: err.message };
     }
 }
@@ -135,13 +165,50 @@ export async function loginUser(email, password) {
         const uid = cred.user.uid;
         const snap = await getDoc(doc(db, COL.USERS, uid));
         if (!snap.exists()) return { error: 'User profile not found' };
-        const user = { id: snap.id, ...snap.data() };
+
+        // Check if user is banned
+        const userData = snap.data();
+        if (userData.banned) {
+            await signOut(auth);
+            return { error: 'This account has been suspended. Contact support.' };
+        }
+
+        // Check email verification (skip for demo/seed accounts)
+        const isDemoAccount = ['admin@rentora.com', 'tunde@email.com', 'adekunle@email.com',
+            'funke@email.com', 'emeka@email.com', 'bisi@email.com', 'adebayo@email.com'].includes(email);
+        if (!cred.user.emailVerified && !isDemoAccount) {
+            // Update Firestore emailVerified status
+            return {
+                user: { id: snap.id, ...userData },
+                emailNotVerified: true,
+                message: 'Please verify your email address. Check your inbox for a verification link.'
+            };
+        }
+
+        // Sync emailVerified status to Firestore
+        if (cred.user.emailVerified && !userData.emailVerified) {
+            await updateDoc(doc(db, COL.USERS, uid), { emailVerified: true });
+        }
+
+        const user = { id: snap.id, ...userData, emailVerified: cred.user.emailVerified };
         _currentUser = cred.user;
         _currentUserDoc = user;
+
+        // Start session timeout (auto-logout after 30 min idle)
+        startSessionTimer(async () => {
+            console.warn('[Rentora] Session expired due to inactivity');
+            await logoutUser();
+            window.location.hash = '#/login';
+            window.location.reload();
+        });
+
         return { user };
     } catch (err) {
         if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
             return { error: 'Invalid email or password' };
+        }
+        if (err.code === 'auth/too-many-requests') {
+            return { error: 'Too many failed attempts. Please try again later.' };
         }
         return { error: err.message };
     }
@@ -153,9 +220,34 @@ export async function getCurrentUser() {
 }
 
 export async function logoutUser() {
+    stopSessionTimer();
     await signOut(auth);
     _currentUser = null;
     _currentUserDoc = null;
+}
+
+// ---- Password Reset ----
+export async function resetPassword(email) {
+    try {
+        await sendPasswordResetEmail(auth, email);
+        return { success: true };
+    } catch (err) {
+        if (err.code === 'auth/user-not-found') return { error: 'No account found with this email.' };
+        return { error: err.message };
+    }
+}
+
+// ---- Resend Verification Email ----
+export async function resendVerificationEmail() {
+    if (_currentUser && !_currentUser.emailVerified) {
+        try {
+            await sendEmailVerification(_currentUser);
+            return { success: true };
+        } catch (err) {
+            return { error: err.message };
+        }
+    }
+    return { error: 'No unverified user or already verified.' };
 }
 
 export async function updateUser(userId, updates) {
@@ -190,6 +282,10 @@ export async function getPropertyById(id) {
 export async function createProperty(data) {
     const property = {
         ...data,
+        title: sanitizeInput(data.title),
+        description: sanitizeInput(data.description || ''),
+        address: sanitizeInput(data.address || ''),
+        area: sanitizeInput(data.area || ''),
         views: 0,
         savedBy: 0,
         status: 'pending',
@@ -282,6 +378,11 @@ export async function getTakeoverById(id) {
 export async function createTakeover(data) {
     const takeover = {
         ...data,
+        title: sanitizeInput(data.title),
+        description: sanitizeInput(data.description || ''),
+        address: sanitizeInput(data.address || ''),
+        area: sanitizeInput(data.area || ''),
+        houseRules: sanitizeInput(data.houseRules || ''),
         views: 0,
         status: 'pending',
         createdAt: new Date().toISOString()
@@ -339,21 +440,37 @@ export async function incrementTakeoverViews(id) {
 }
 
 // ---- Messages ----
+// SECURE: Query only messages the current user is involved in (respects Firestore rules)
+async function getMessagesByUser(userId) {
+    const [sentSnap, receivedSnap] = await Promise.all([
+        getDocs(query(collection(db, COL.MESSAGES), where('senderId', '==', userId))),
+        getDocs(query(collection(db, COL.MESSAGES), where('receiverId', '==', userId)))
+    ]);
+    const msgs = new Map();
+    sentSnap.docs.forEach(d => msgs.set(d.id, { id: d.id, ...d.data() }));
+    receivedSnap.docs.forEach(d => msgs.set(d.id, { id: d.id, ...d.data() }));
+    return Array.from(msgs.values());
+}
+
 export async function getMessages() {
-    return getAllDocs(COL.MESSAGES);
+    // If logged in, only fetch user's messages. Otherwise return empty.
+    await waitForAuth();
+    if (!_currentUserDoc) return [];
+    return getMessagesByUser(_currentUserDoc.id);
 }
 
 export async function sendMessage({ senderId, receiverId, propertyId, message }) {
     await addDoc(collection(db, COL.MESSAGES), {
         id: genId(),
-        senderId, receiverId, propertyId, message,
+        senderId, receiverId, propertyId,
+        message: sanitizeInput(message),
         timestamp: new Date().toISOString(),
         read: false
     });
 }
 
 export async function getConversations(userId) {
-    const msgs = (await getMessages()).filter(m => m.senderId === userId || m.receiverId === userId);
+    const msgs = await getMessagesByUser(userId);
     const convos = {};
     msgs.forEach(m => {
         const otherId = m.senderId === userId ? m.receiverId : m.senderId;
@@ -371,7 +488,7 @@ export async function getConversations(userId) {
 }
 
 export async function getChatMessages(userId, otherUserId, propertyId) {
-    const msgs = await getMessages();
+    const msgs = await getMessagesByUser(userId);
     return msgs
         .filter(m => m.propertyId === propertyId &&
             ((m.senderId === userId && m.receiverId === otherUserId) ||
@@ -471,7 +588,8 @@ export async function getReviews() {
 
 export async function createReview({ userId, userName, propertyId, rating, text }) {
     const review = {
-        userId, userName, propertyId, rating, text,
+        userId, userName: sanitizeInput(userName), propertyId, rating,
+        text: sanitizeInput(text),
         createdAt: new Date().toISOString()
     };
     const ref = await addDoc(collection(db, COL.REVIEWS), review);
@@ -496,7 +614,10 @@ export async function getReports() {
 
 export async function createReport({ reporterId, reporterName, targetId, targetType, reason, details }) {
     const report = {
-        reporterId, reporterName, targetId, targetType, reason, details,
+        reporterId, reporterName: sanitizeInput(reporterName),
+        targetId, targetType,
+        reason: sanitizeInput(reason),
+        details: sanitizeInput(details || ''),
         status: 'pending',
         createdAt: new Date().toISOString()
     };
@@ -604,7 +725,9 @@ export async function seedData() {
 
     for (const u of seedUsers) {
         const { id, ...data } = u;
-        const password = id.startsWith('admin') ? 'admin123' : 'pass123';
+        const password = id.startsWith('admin')
+            ? (import.meta.env.VITE_SEED_ADMIN_PASSWORD || 'admin123')
+            : (import.meta.env.VITE_SEED_USER_PASSWORD || 'pass123');
         let uid = id;
         try {
             const cred = await createUserWithEmailAndPassword(auth, u.email, password);
@@ -625,7 +748,7 @@ export async function seedData() {
 
     // Sign in as admin for writing properties/takeovers/messages
     try {
-        await signInWithEmailAndPassword(auth, 'admin@rentora.com', 'admin123');
+        await signInWithEmailAndPassword(auth, 'admin@rentora.com', import.meta.env.VITE_SEED_ADMIN_PASSWORD || 'admin123');
     } catch (e) { console.warn('Admin sign-in failed:', e.message); }
 
     // ---- Seed properties ----

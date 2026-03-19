@@ -3,6 +3,7 @@ import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
 import { showReportModal } from './reportModal.js';
 import { createReviewSection } from './reviewSection.js';
+import { escapeHTML } from '../utils/authSecurity.js';
 import { showInspectionModal } from './inspectionBooking.js';
 
 export async function createPropertyDetail(propertyId) {
@@ -14,7 +15,7 @@ export async function createPropertyDetail(propertyId) {
     return el;
   }
 
-  await incrementPropertyViews(propertyId);
+  await incrementPropertyViews(propertyId).catch(() => {});
   const user = await getCurrentUser();
   const formatPrice = (p) => '₦' + p.toLocaleString();
 
@@ -27,19 +28,19 @@ export async function createPropertyDetail(propertyId) {
       Back to listings
     </button>
 
-    <h1 class="detail-title">${property.title}</h1>
+    <h1 class="detail-title">${escapeHTML(property.title)}</h1>
     <div class="detail-subtitle">
       <span class="detail-subtitle-item">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M7 1C5 1 3.5 2.5 3.5 4.5c0 3 3.5 8.5 3.5 8.5s3.5-5.5 3.5-8.5C10.5 2.5 9 1 7 1z"/><circle cx="7" cy="4.5" r="1.5"/></svg>
-        ${property.area} · ${property.distanceFromCampus}km from FUTA
+        ${escapeHTML(property.area)} · ${escapeHTML(property.distanceFromCampus)}km from FUTA
       </span>
-      <span class="detail-subtitle-item">${property.type} · ${property.roomsAvailable} room${property.roomsAvailable !== 1 ? 's' : ''} available</span>
+      <span class="detail-subtitle-item">${escapeHTML(property.type)} · ${property.roomsAvailable} room${property.roomsAvailable !== 1 ? 's' : ''} available</span>
       ${property.verified ? '<span class="detail-subtitle-item" style="color:var(--color-primary);font-weight:600">✓ Verified Listing</span>' : ''}
     </div>
 
     <div class="detail-gallery">
-      <div class="detail-gallery-main"><img src="${property.images[0]}" alt="${property.title}" /></div>
-      ${(property.images || []).slice(1).map(img => `<div><img src="${img}" alt="${property.title}" /></div>`).join('')}
+      <div class="detail-gallery-main"><img src="${property.images[0]}" alt="${escapeHTML(property.title)}" /></div>
+      ${(property.images || []).slice(1).map(img => `<div><img src="${img}" alt="${escapeHTML(property.title)}" /></div>`).join('')}
     </div>
 
     <div class="detail-body">
@@ -76,7 +77,7 @@ export async function createPropertyDetail(propertyId) {
         <!-- Description -->
         <div class="detail-section">
           <h2 class="detail-section-title">About this place</h2>
-          <p class="detail-description">${property.description}</p>
+          <p class="detail-description">${escapeHTML(property.description)}</p>
         </div>
 
         <!-- Amenities -->
@@ -178,7 +179,11 @@ export async function createPropertyDetail(propertyId) {
   `;
 
   // Add reviews section
-  detail.querySelector('#reviews-container').appendChild(await createReviewSection(propertyId));
+  try {
+    detail.querySelector('#reviews-container').appendChild(await createReviewSection(propertyId));
+  } catch (err) {
+    console.warn('[Rentora] Could not load reviews:', err.message);
+  }
 
   // Back
   detail.querySelector('#detail-back').addEventListener('click', () => window.history.back());

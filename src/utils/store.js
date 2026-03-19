@@ -57,10 +57,23 @@ export async function createUser({ name, email, phone, password, role, ...extra 
 export async function loginUser(email, password) {
   if (USE_FIREBASE) return fb.loginUser(email, password);
   const users = _get(KEYS.USERS) || [];
+  // NOTE: localStorage fallback compares plaintext — for local dev only
   const user = users.find(u => u.email === email && u.password === password);
   if (!user) return { error: 'Invalid email or password' };
-  _set(KEYS.CURRENT_USER, user);
-  return { user };
+  // Strip password before storing in session
+  const { password: _, ...safeUser } = user;
+  _set(KEYS.CURRENT_USER, safeUser);
+  return { user: safeUser };
+}
+
+export async function resetPassword(email) {
+  if (USE_FIREBASE) return fb.resetPassword(email);
+  return { error: 'Password reset is not available in offline mode.' };
+}
+
+export async function resendVerificationEmail() {
+  if (USE_FIREBASE) return fb.resendVerificationEmail();
+  return { error: 'Email verification is not available in offline mode.' };
 }
 
 export async function getCurrentUser() {
@@ -541,21 +554,23 @@ export async function seedData() {
   }
 
   // Admin user
-  await createUser({ name: 'Admin', email: 'admin@rentora.com', phone: '08000000000', password: 'admin123', role: 'admin' });
+  const adminPw = import.meta.env.VITE_SEED_ADMIN_PASSWORD || 'admin123';
+  const userPw = import.meta.env.VITE_SEED_USER_PASSWORD || 'pass123';
+  await createUser({ name: 'Admin', email: 'admin@rentora.com', phone: '08000000000', password: adminPw, role: 'admin' });
 
   const landlords = [
-    await createUser({ name: 'Adekunle Ajayi', email: 'adekunle@email.com', phone: '08012345678', password: 'pass123', role: 'landlord' }),
-    await createUser({ name: 'Funke Oladipo', email: 'funke@email.com', phone: '08023456789', password: 'pass123', role: 'landlord' }),
-    await createUser({ name: 'Emeka Nwosu', email: 'emeka@email.com', phone: '08034567890', password: 'pass123', role: 'landlord' }),
-    await createUser({ name: 'Bisi Adeyemi', email: 'bisi@email.com', phone: '08045678901', password: 'pass123', role: 'landlord' }),
+    await createUser({ name: 'Adekunle Ajayi', email: 'adekunle@email.com', phone: '08012345678', password: userPw, role: 'landlord' }),
+    await createUser({ name: 'Funke Oladipo', email: 'funke@email.com', phone: '08023456789', password: userPw, role: 'landlord' }),
+    await createUser({ name: 'Emeka Nwosu', email: 'emeka@email.com', phone: '08034567890', password: userPw, role: 'landlord' }),
+    await createUser({ name: 'Bisi Adeyemi', email: 'bisi@email.com', phone: '08045678901', password: userPw, role: 'landlord' }),
   ];
 
   for (let i = 0; i < 3; i++) {
     if (landlords[i]?.user) await verifyLandlord(landlords[i].user.id);
   }
 
-  const tenantResult = await createUser({ name: 'Tunde Student', email: 'tunde@email.com', phone: '08056789012', password: 'pass123', role: 'tenant' });
-  const tenant2Result = await createUser({ name: 'Adebayo Kolade', email: 'adebayo@email.com', phone: '08067890123', password: 'pass123', role: 'tenant' });
+  const tenantResult = await createUser({ name: 'Tunde Student', email: 'tunde@email.com', phone: '08056789012', password: userPw, role: 'tenant' });
+  const tenant2Result = await createUser({ name: 'Adebayo Kolade', email: 'adebayo@email.com', phone: '08067890123', password: userPw, role: 'tenant' });
 
   const ll = landlords.map(l => l.user?.id).filter(Boolean);
 

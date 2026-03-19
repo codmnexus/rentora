@@ -1,19 +1,20 @@
 // ============================================
 // Rentora — Firebase Configuration
 // ============================================
+// Config loaded from environment variables (see .env)
 
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyD4AWWH2HKE7vVUzoloG9iN2UQ17BOyCTs",
-    authDomain: "rentoral.firebaseapp.com",
-    projectId: "rentoral",
-    storageBucket: "rentoral.firebasestorage.app",
-    messagingSenderId: "141304183045",
-    appId: "1:141304183045:web:951e01c27cc67cb68b1f6c",
-    measurementId: "G-EFF7L12907"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);

@@ -17,6 +17,8 @@ service cloud.firestore {
     }
 
     function isAdmin() {
+      // NOTE: For production, use Firebase Auth Custom Claims instead:
+      // return isAuthenticated() && request.auth.token.admin == true;
       return isAuthenticated() && getUserRole() == 'admin';
     }
 
@@ -28,14 +30,22 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if true;
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      // Users can only update safe fields — block role/verified/banned self-escalation
+      allow update: if isOwner(userId) && (
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['role', 'verified', 'banned', 'emailVerified'])
+      ) || isAdmin();
       allow delete: if isAdmin();
     }
 
     // ---- Properties ----
     match /properties/{propertyId} {
       allow read: if true;
-      allow create: if isAuthenticated() && (isLandlord() || isAdmin());
+      allow create: if isAuthenticated() && (isLandlord() || isAdmin())
+        && request.resource.data.keys().hasAll(['title', 'type', 'area', 'price'])
+        && request.resource.data.title is string
+        && request.resource.data.price is number
+        && request.resource.data.price > 0;
       allow update: if isAuthenticated() && (
         resource.data.landlordId == request.auth.uid || isAdmin()
       );
@@ -47,7 +57,9 @@ service cloud.firestore {
     // ---- Takeovers ----
     match /takeovers/{takeoverId} {
       allow read: if true;
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasAll(['title', 'rent', 'area'])
+        && request.resource.data.rent is number;
       allow update: if isAuthenticated() && (
         resource.data.studentId == request.auth.uid || isAdmin()
       );
@@ -63,7 +75,9 @@ service cloud.firestore {
         resource.data.receiverId == request.auth.uid
       );
       allow create: if isAuthenticated() &&
-        request.resource.data.senderId == request.auth.uid;
+        request.resource.data.senderId == request.auth.uid &&
+        request.resource.data.message is string &&
+        request.resource.data.message.size() <= 2000;
       allow update, delete: if false;
     }
 
@@ -85,7 +99,8 @@ service cloud.firestore {
         resource.data.landlordId == request.auth.uid ||
         isAdmin()
       );
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasAll(['tenantId', 'propertyId', 'date', 'time']);
       allow update: if isAuthenticated() && (
         resource.data.landlordId == request.auth.uid || isAdmin()
       );
@@ -96,7 +111,10 @@ service cloud.firestore {
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if isAuthenticated() &&
-        request.resource.data.userId == request.auth.uid;
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.rating is number &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5;
       allow update: if isAuthenticated() &&
         resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && (
@@ -107,7 +125,9 @@ service cloud.firestore {
     // ---- Reports ----
     match /reports/{reportId} {
       allow read: if isAdmin();
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasAll(['reporterId', 'targetId', 'reason'])
+        && request.resource.data.reason is string;
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
@@ -118,7 +138,9 @@ service cloud.firestore {
         resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() &&
-        resource.data.userId == request.auth.uid;
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['read']);
       allow delete: if isAuthenticated() &&
         resource.data.userId == request.auth.uid;
     }

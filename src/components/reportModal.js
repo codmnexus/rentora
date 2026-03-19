@@ -1,6 +1,7 @@
 import { getCurrentUser, createReport } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
+import { MAX_LENGTHS } from '../utils/authSecurity.js';
 
 export async function showReportModal(targetId, targetType = 'property') {
   const user = await getCurrentUser();
@@ -62,6 +63,7 @@ export async function showReportModal(targetId, targetType = 'property') {
     const errEl = overlay.querySelector('#report-error');
 
     if (!reason) { errEl.textContent = 'Please select a reason'; errEl.style.display = ''; return; }
+    if (details.length > MAX_LENGTHS.reportDetails) { errEl.textContent = `Details must be under ${MAX_LENGTHS.reportDetails} characters`; errEl.style.display = ''; return; }
 
     await createReport({
       reporterId: user.id,

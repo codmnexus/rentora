@@ -1,5 +1,6 @@
 import { getCurrentUser, getConversations, getChatMessages, sendMessage, getUserById, getPropertyById } from '../utils/store.js';
 import { navigate, getCurrentRoute } from '../utils/router.js';
+import { escapeHTML, MAX_LENGTHS } from '../utils/authSecurity.js';
 
 export async function createMessagesPage() {
   const user = await getCurrentUser();
@@ -37,10 +38,10 @@ export async function createMessagesPage() {
       const item = document.createElement('div');
       item.className = `conversation-item${(targetUserId === c.otherUserId && targetPropertyId === c.propertyId) ? ' active' : ''}`;
       item.innerHTML = `
-        <div class="conversation-avatar">${other?.name?.charAt(0) || '?'}</div>
+        <div class="conversation-avatar">${escapeHTML(other?.name?.charAt(0) || '?')}</div>
         <div class="conversation-info">
-          <div class="conversation-name">${other?.name || 'User'}</div>
-          <div class="conversation-preview">${prop?.title || 'Property'}</div>
+          <div class="conversation-name">${escapeHTML(other?.name || 'User')}</div>
+          <div class="conversation-preview">${escapeHTML(prop?.title || 'Property')}</div>
         </div>
         <div class="conversation-time">${new Date(c.lastMessage.timestamp).toLocaleDateString()}</div>
       `;
@@ -59,19 +60,19 @@ export async function createMessagesPage() {
 
     chatArea.innerHTML = `
       <div class="chat-header">
-        <div class="conversation-avatar" style="width:36px;height:36px;font-size:14px">${other?.name?.charAt(0) || '?'}</div>
+        <div class="conversation-avatar" style="width:36px;height:36px;font-size:14px">${escapeHTML(other?.name?.charAt(0) || '?')}</div>
         <div>
-          <div class="chat-header-name">${other?.name || 'User'}</div>
-          <div class="chat-property-ref">${prop?.title || 'Property'} — ${prop?.area || ''}</div>
+          <div class="chat-header-name">${escapeHTML(other?.name || 'User')}</div>
+          <div class="chat-property-ref">${escapeHTML(prop?.title || 'Property')} — ${escapeHTML(prop?.area || '')}</div>
         </div>
       </div>
       <div class="chat-messages" id="chat-messages">
         ${messages.map(m => `
           <div class="chat-bubble ${m.senderId === user.id ? 'sent' : 'received'}">
-            ${m.message}
+            ${escapeHTML(m.message)}
             <div class="chat-bubble-time">${new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
           </div>
-        `).join('')}
+        `).join('')}}
         ${messages.length === 0 ? '<div style="text-align:center;color:var(--color-gray-400);font-size:13px;margin:auto">Start the conversation</div>' : ''}
       </div>
       <div class="chat-input">
@@ -92,6 +93,11 @@ export async function createMessagesPage() {
     const send = async () => {
       const msg = input.value.trim();
       if (!msg) return;
+      if (msg.length > MAX_LENGTHS.message) {
+        input.style.outline = '2px solid #EF4444';
+        setTimeout(() => input.style.outline = '', 2000);
+        return;
+      }
       await sendMessage({ senderId: user.id, receiverId: otherId, propertyId: propId, message: msg });
       input.value = '';
       renderChat(otherId, propId);

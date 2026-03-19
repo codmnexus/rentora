@@ -2,6 +2,7 @@ import { getTakeoverById, incrementTakeoverViews, getCurrentUser } from '../util
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
 import { showReportModal } from './reportModal.js';
+import { escapeHTML } from '../utils/authSecurity.js';
 
 export async function createTakeoverDetail(takeoverId) {
   const takeover = await getTakeoverById(takeoverId);
@@ -39,15 +40,15 @@ export async function createTakeoverDetail(takeoverId) {
       </div>
     </div>
 
-    <h1 class="detail-title">${takeover.title}</h1>
+    <h1 class="detail-title">${escapeHTML(takeover.title)}</h1>
     <div class="detail-subtitle">
       <span class="detail-subtitle-item">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1C5 1 3.5 2.5 3.5 4.5c0 3 3.5 6.5 3.5 6.5s3.5-3.5 3.5-6.5C10.5 2.5 9 1 7 1z"/><circle cx="7" cy="4.5" r="1.5"/></svg>
-        ${takeover.area}
+        ${escapeHTML(takeover.area)}
       </span>
       <span class="detail-subtitle-item">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="12" height="9" rx="1"/><path d="M1 7h12"/></svg>
-        ${takeover.apartmentType}
+        ${escapeHTML(takeover.apartmentType)}
       </span>
       <span class="detail-subtitle-item" style="color:var(--color-warning);font-weight:600">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="6"/><path d="M7 4v3l2 1"/></svg>
@@ -57,16 +58,16 @@ export async function createTakeoverDetail(takeoverId) {
 
     <div class="detail-gallery" style="grid-template-rows:300px">
       ${(takeover.images || []).map((img, i) => `
-        <img src="${img}" alt="${takeover.title}" class="${i === 0 ? 'detail-gallery-main' : ''}" />
+        <img src="${escapeHTML(img)}" alt="${escapeHTML(takeover.title)}" class="${i === 0 ? 'detail-gallery-main' : ''}" />
       `).join('')}
     </div>
 
     <div class="detail-body">
       <div class="detail-info">
         <div class="landlord-profile">
-          <div class="landlord-avatar">${takeover.studentName?.charAt(0) || '?'}</div>
+          <div class="landlord-avatar">${escapeHTML(takeover.studentName?.charAt(0) || '?')}</div>
           <div class="landlord-info">
-            <div class="landlord-name">${takeover.studentName || 'Student'}</div>
+            <div class="landlord-name">${escapeHTML(takeover.studentName || 'Student')}</div>
             <div class="landlord-meta">Current tenant · Looking for someone to take over</div>
           </div>
         </div>
@@ -89,13 +90,13 @@ export async function createTakeoverDetail(takeoverId) {
 
         <div class="detail-section">
           <div class="detail-section-title">About This Takeover</div>
-          <p class="detail-description">${takeover.description}</p>
+          <p class="detail-description">${escapeHTML(takeover.description)}</p>
         </div>
 
         ${takeover.houseRules ? `
         <div class="detail-section">
           <div class="detail-section-title">House Rules</div>
-          <p class="detail-description">${takeover.houseRules}</p>
+          <p class="detail-description">${escapeHTML(takeover.houseRules)}</p>
         </div>
         ` : ''}
 
@@ -106,7 +107,7 @@ export async function createTakeoverDetail(takeoverId) {
             ${takeover.amenities.map(a => `
               <div class="amenity-item">
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8l4 4 8-8"/></svg>
-                ${a}
+                ${escapeHTML(a)}
               </div>
             `).join('')}
           </div>
@@ -147,7 +148,7 @@ export async function createTakeoverDetail(takeoverId) {
           </div>
           <div class="booking-detail">
             <span class="booking-detail-label">Area</span>
-            <span class="booking-detail-value">${takeover.area}</span>
+            <span class="booking-detail-value">${escapeHTML(takeover.area)}</span>
           </div>
         </div>
         <div class="incentive-pill">

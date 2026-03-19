@@ -1,6 +1,7 @@
 import { getCurrentUser, logoutUser } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { createNotificationBell } from './notificationCenter.js';
+import { escapeHTML } from '../utils/authSecurity.js';
 
 export async function createHeader() {
   const user = await getCurrentUser();
@@ -28,11 +29,11 @@ export async function createHeader() {
         <div style="position:relative;">
           <button class="user-menu-btn" id="user-menu-toggle">
             <div class="user-menu-hamburger"><span></span><span></span><span></span></div>
-            <div class="user-menu-avatar${user ? ' logged-in' : ''}">${user ? user.avatar || user.name.charAt(0) : '<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zM2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>'}</div>
+            <div class="user-menu-avatar${user ? ' logged-in' : ''}">${user ? escapeHTML(user.avatar || user.name.charAt(0)) : '<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zM2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>'}</div>
           </button>
           <div class="user-dropdown" id="user-dropdown">
             ${user ? `
-              <button class="user-dropdown-item bold">${user.name}</button>
+              <button class="user-dropdown-item bold">${escapeHTML(user.name)}</button>
               <div class="user-dropdown-divider"></div>
               ${user.role === 'tenant' ? '<button class="user-dropdown-item" data-route="/dashboard">My Dashboard</button>' : ''}
               ${user.role === 'landlord' ? '<button class="user-dropdown-item" data-route="/landlord">Landlord Dashboard</button>' : ''}

@@ -1,6 +1,7 @@
 import { getCurrentUser, getPropertiesByLandlord, getConversations, getPropertyById, deleteProperty, markAsRented, markAsAvailable, getInspectionsByLandlord, approveInspection, rescheduleInspection } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
+import { escapeHTML } from '../utils/authSecurity.js';
 
 export async function createLandlordDashboard() {
   const user = await getCurrentUser();
@@ -16,7 +17,7 @@ export async function createLandlordDashboard() {
 
   page.innerHTML = `
     <div class="dashboard-header">
-      <h1 class="dashboard-greeting">Welcome, <span>${user.name.split(' ')[0]}</span> 🏠</h1>
+      <h1 class="dashboard-greeting">Welcome, <span>${escapeHTML(user.name.split(' ')[0])}</span> 🏠</h1>
       <p class="dashboard-subtitle">Manage your property listings and tenant inquiries</p>
     </div>
 
@@ -71,8 +72,8 @@ export async function createLandlordDashboard() {
       <tbody>
         ${properties.map(p => `
           <tr>
-            <td style="font-weight:600">${p.title}</td>
-            <td>${p.area}</td>
+            <td style="font-weight:600">${escapeHTML(p.title)}</td>
+            <td>${escapeHTML(p.area)}</td>
             <td>${formatPrice(p.price)}</td>
             <td>${p.views || 0}</td>
             <td><span class="status-badge ${p.rented ? 'rejected' : p.status}">${p.rented ? 'Rented' : p.status}</span></td>

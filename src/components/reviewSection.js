@@ -1,6 +1,7 @@
 import { getCurrentUser, createReview, getReviewsByProperty, getAverageRating } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
+import { escapeHTML, MAX_LENGTHS } from '../utils/authSecurity.js';
 
 function renderStars(rating, interactive = false) {
   let html = '';
@@ -46,12 +47,12 @@ export async function createReviewSection(propertyId) {
           <div class="review-item-header">
             <div class="review-avatar">${r.userName?.charAt(0) || '?'}</div>
             <div>
-              <div class="review-name">${r.userName || 'User'}</div>
+              <div class="review-name">${escapeHTML(r.userName || 'User')}</div>
               <div class="review-date">${new Date(r.createdAt).toLocaleDateString('en-NG', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
             </div>
             <div class="review-item-stars">${renderStars(r.rating)}</div>
           </div>
-          <p class="review-text">${r.text}</p>
+          <p class="review-text">${escapeHTML(r.text)}</p>
         </div>
       `).join('') : '<div class="review-empty">Be the first to review this property</div>'}
     </div>
@@ -82,6 +83,7 @@ export async function createReviewSection(propertyId) {
       const text = section.querySelector('#review-text').value.trim();
       if (rating < 1) { showToast('Please select a star rating', 'error'); return; }
       if (!text) { showToast('Please write a short review', 'error'); return; }
+      if (text.length > MAX_LENGTHS.reviewText) { showToast(`Review must be under ${MAX_LENGTHS.reviewText} characters`, 'error'); return; }
 
       await createReview({ userId: user.id, userName: user.name, propertyId, rating, text });
       showToast('Review submitted! ⭐');

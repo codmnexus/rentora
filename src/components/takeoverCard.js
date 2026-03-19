@@ -1,6 +1,7 @@
 import { getCurrentUser, isListingSaved, saveListing, removeSavedListing } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
+import { escapeHTML } from '../utils/authSecurity.js';
 
 export async function createTakeoverCard(takeover) {
   const card = document.createElement('div');
@@ -17,7 +18,7 @@ export async function createTakeoverCard(takeover) {
   card.innerHTML = `
     <div class="property-card-image-wrapper">
       <div class="carousel-images" style="transform:translateX(0%)" data-current="0">
-        ${(takeover.images || []).map(img => `<img src="${img}" alt="${takeover.title}" loading="lazy" />`).join('')}
+        ${(takeover.images || []).map(img => `<img src="${escapeHTML(img)}" alt="${escapeHTML(takeover.title)}" loading="lazy" />`).join('')}
       </div>
       ${imageCount > 1 ? `
         <button class="carousel-btn prev" aria-label="Previous">
@@ -38,16 +39,16 @@ export async function createTakeoverCard(takeover) {
     </div>
     <div class="property-card-info">
       <div class="property-card-header">
-        <div class="property-card-title">${takeover.title}</div>
+        <div class="property-card-title">${escapeHTML(takeover.title)}</div>
       </div>
       <div class="property-card-location">
         <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1C4 1 2.5 2.5 2.5 4.5c0 3 3.5 6.5 3.5 6.5s3.5-3.5 3.5-6.5C9.5 2.5 8 1 6 1z"/><circle cx="6" cy="4.5" r="1.2"/></svg>
-        ${takeover.area}${closestGate ? ` · ${closestGate}` : ''}
+        ${escapeHTML(takeover.area)}${closestGate ? ` · ${closestGate}` : ''}
       </div>
       <div class="property-card-meta">
         <span class="property-card-meta-item">
           <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="10" height="8" rx="1"/><path d="M1 7h10"/></svg>
-          ${takeover.apartmentType}
+          ${escapeHTML(takeover.apartmentType)}
         </span>
         <span class="property-card-meta-item takeover-lease">
           <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="5"/><path d="M6 3v3l2 1"/></svg>
@@ -56,8 +57,8 @@ export async function createTakeoverCard(takeover) {
       </div>
       <div class="property-card-price">${formatPrice(takeover.rent)} <span>/ year</span></div>
       <div class="takeover-student-line">
-        <span class="takeover-student-avatar">${takeover.studentName?.charAt(0) || '?'}</span>
-        Posted by ${takeover.studentName?.split(' ')[0] || 'Student'}
+        <span class="takeover-student-avatar">${escapeHTML(takeover.studentName?.charAt(0) || '?')}</span>
+        Posted by ${escapeHTML(takeover.studentName?.split(' ')[0] || 'Student')}
       </div>
     </div>
   `;

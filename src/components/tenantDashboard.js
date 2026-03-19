@@ -2,6 +2,7 @@ import { getCurrentUser, getSavedListings, getPropertyById, getConversations, ge
 import { navigate } from '../utils/router.js';
 import { createPropertyCard } from './propertyCard.js';
 import { createTakeoverCard } from './takeoverCard.js';
+import { escapeHTML } from '../utils/authSecurity.js';
 
 export async function createTenantDashboard() {
   const user = await getCurrentUser();
@@ -18,7 +19,7 @@ export async function createTenantDashboard() {
 
   page.innerHTML = `
     <div class="dashboard-header">
-      <h1 class="dashboard-greeting">Hey, <span>${user.name.split(' ')[0]}</span> 👋</h1>
+      <h1 class="dashboard-greeting">Hey, <span>${escapeHTML(user.name.split(' ')[0])}</span> 👋</h1>
       <p class="dashboard-subtitle">Find and manage your student housing</p>
     </div>
 
@@ -132,10 +133,10 @@ export async function createTenantDashboard() {
       item.className = 'conversation-item';
       item.style.cssText = 'cursor:pointer;padding:16px;border:1px solid var(--color-gray-100);border-radius:12px;margin-bottom:8px';
       item.innerHTML = `
-        <div class="conversation-avatar">${other?.name?.charAt(0) || '?'}</div>
+        <div class="conversation-avatar">${escapeHTML(other?.name?.charAt(0) || '?')}</div>
         <div class="conversation-info">
-          <div class="conversation-name">${other?.name || 'User'}</div>
-          <div class="conversation-preview">${prop?.title || 'Property'} — ${c.lastMessage.message}</div>
+          <div class="conversation-name">${escapeHTML(other?.name || 'User')}</div>
+          <div class="conversation-preview">${escapeHTML(prop?.title || 'Property')} — ${escapeHTML(c.lastMessage.message)}</div>
         </div>
         <div class="conversation-time">${new Date(c.lastMessage.timestamp).toLocaleDateString()}</div>
       `;

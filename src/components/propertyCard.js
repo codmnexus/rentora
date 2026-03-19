@@ -1,5 +1,6 @@
 import { getCurrentUser, isListingSaved, saveListing, removeSavedListing } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
+import { escapeHTML } from '../utils/authSecurity.js';
 import { showToast } from './header.js';
 
 export async function createPropertyCard(property) {
@@ -24,7 +25,7 @@ export async function createPropertyCard(property) {
   card.innerHTML = `
     <div class="property-card-image-wrapper">
       <div class="carousel-images" style="transform:translateX(0%)" data-current="0">
-        ${(property.images || []).map(img => `<img src="${img}" alt="${property.title}" loading="lazy" />`).join('')}
+        ${(property.images || []).map(img => `<img src="${escapeHTML(img)}" alt="${escapeHTML(property.title)}" loading="lazy" />`).join('')}
       </div>
       ${imageCount > 1 ? `
         <button class="carousel-btn prev" aria-label="Previous">
@@ -49,16 +50,16 @@ export async function createPropertyCard(property) {
     </div>
     <div class="property-card-info">
       <div class="property-card-header">
-        <div class="property-card-title">${property.title}</div>
+        <div class="property-card-title">${escapeHTML(property.title)}</div>
       </div>
       <div class="property-card-location">
         <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1C4 1 2.5 2.5 2.5 4.5c0 3 3.5 6.5 3.5 6.5s3.5-3.5 3.5-6.5C9.5 2.5 8 1 6 1z"/><circle cx="6" cy="4.5" r="1.2"/></svg>
-        ${property.area} · ${gateText}
+        ${escapeHTML(property.area)} · ${gateText}
       </div>
       <div class="property-card-meta">
         <span class="property-card-meta-item">
           <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="10" height="8" rx="1"/><path d="M1 7h10"/></svg>
-          ${property.type}
+          ${escapeHTML(property.type)}
         </span>
         <span class="property-card-meta-item">
           <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8V6a2 2 0 014 0v2"/><rect x="2" y="8" width="8" height="3" rx="1"/></svg>

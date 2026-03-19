@@ -1,4 +1,5 @@
 import { getCurrentUser, getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead } from '../utils/store.js';
+import { escapeHTML } from '../utils/authSecurity.js';
 
 export async function createNotificationBell() {
   const user = await getCurrentUser();
@@ -40,7 +41,7 @@ export async function createNotificationBell() {
         <div class="notif-item ${n.read ? '' : 'unread'}" data-id="${n.id}">
           <div class="notif-icon">${icon}</div>
           <div class="notif-content">
-            <div class="notif-message">${n.message}</div>
+            <div class="notif-message">${escapeHTML(n.message)}</div>
             <div class="notif-time">${timeAgo}</div>
           </div>
           ${!n.read ? '<div class="notif-dot"></div>' : ''}

@@ -58,6 +58,7 @@ async function render() {
   const takeoverMatch = matchRoute('/takeover/:id', route.path);
   const paymentMatch = matchRoute('/payment/:id', route.path);
 
+  try {
   if (propertyMatch) {
     app.appendChild(await createPropertyDetail(propertyMatch.id));
     app.appendChild(createFooter());
@@ -191,6 +192,23 @@ async function render() {
     }));
     const defaultProps = await getApprovedProperties();
     renderHomeGrid(defaultProps);
+    app.appendChild(createFooter());
+  }
+  } catch (routeError) {
+    console.error('[Rentora] Route render error:', routeError);
+    const errorEl = document.createElement('div');
+    errorEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px 20px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:16px">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 8v4M12 16h.01"/>
+        </svg>
+        <h2 style="font-size:1.25rem;font-weight:700;color:#1E293B;margin-bottom:8px">Something went wrong</h2>
+        <p style="font-size:14px;color:#64748B;max-width:400px;margin-bottom:20px">We couldn't load this page. This may be due to a network issue or the content may no longer be available.</p>
+        <button onclick="window.location.hash='#/';location.reload()" style="padding:10px 24px;background:#1E3A5F;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Go Home</button>
+      </div>
+    `;
+    app.appendChild(errorEl);
     app.appendChild(createFooter());
   }
 

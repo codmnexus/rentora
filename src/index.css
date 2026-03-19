@@ -5803,3 +5803,94 @@ textarea {
     top: 12px
   }
 }
+
+/* ---- Auth Security Styles ---- */
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.password-strength-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.password-strength-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease, background 0.3s ease;
+  width: 0;
+}
+
+.password-strength-fill.strength-weak { background: #EF4444; }
+.password-strength-fill.strength-fair { background: #F59E0B; }
+.password-strength-fill.strength-good { background: #3B82F6; }
+.password-strength-fill.strength-strong { background: #10B981; }
+
+.password-strength-label {
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 40px;
+  text-align: right;
+}
+
+.password-strength-label.strength-weak { color: #EF4444; }
+.password-strength-label.strength-fair { color: #F59E0B; }
+.password-strength-label.strength-good { color: #3B82F6; }
+.password-strength-label.strength-strong { color: #10B981; }
+
+.password-rules {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  display: grid;
+  gap: 2px;
+}
+
+.password-rules li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 0;
+  transition: color 0.2s;
+}
+
+.password-rules .rule-pass {
+  color: #10B981;
+}
+
+.password-rules .rule-fail {
+  color: #94A3B8;
+}
+
+.auth-link {
+  font-size: 13px;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.auth-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.form-info {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #059669;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
