@@ -1,0 +1,204 @@
+import { getCurrentUser, createTakeover } from '../utils/store.js';
+import { navigate } from '../utils/router.js';
+import { showToast } from './header.js';
+
+export async function createPostTakeover() {
+  const user = await getCurrentUser();
+  if (!user) { navigate('/login'); return document.createElement('div'); }
+
+  const page = document.createElement('div');
+  page.className = 'post-property';
+
+  page.innerHTML = `
+    <div class="takeover-badge-inline" style="margin-bottom:16px">
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6l5 5 5-5M6 1v10"/></svg>
+      Room Takeover
+    </div>
+
+    <div class="incentive-banner" style="margin-bottom:20px">
+      <div class="incentive-icon">₦5k</div>
+      <div>
+        <strong>Earn ₦5,000 Reward!</strong>
+        <span>Get ₦5,000 when your takeover is successfully completed and the new tenant moves in. Verified via Rentora escrow.</span>
+      </div>
+    </div>
+
+    <h1>Post a Room Takeover</h1>
+    <p class="subtitle">Transfer your room to another student before your lease ends</p>
+
+    <div class="form-card">
+      <div class="form-card-title">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.17 7.83L10 1l6.83 6.83V17a2 2 0 01-2 2H5.17a2 2 0 01-2-2V7.83z"/></svg>
+        Room Details
+      </div>
+      <div class="form-group">
+        <label class="form-label">Listing Title</label>
+        <input type="text" class="form-input" id="to-title" placeholder="e.g. Room in 2-bedroom flat — South Gate" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Apartment Type</label>
+          <select class="form-select" id="to-type">
+            <option value="Self-con">Self-con</option>
+            <option value="Single room">Single Room</option>
+            <option value="Flat">Flat</option>
+            <option value="Shared room">Shared Room</option>
+            <option value="Studio">Studio</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Area</label>
+          <select class="form-select" id="to-area">
+            <option value="FUTA South Gate">FUTA South Gate</option>
+            <option value="FUTA North Gate">FUTA North Gate</option>
+            <option value="Roadblock">Roadblock</option>
+            <option value="Ijapo Estate">Ijapo Estate</option>
+            <option value="Oba Ile">Oba Ile</option>
+            <option value="Aule">Aule</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Full Address</label>
+        <input type="text" class="form-input" id="to-address" placeholder="e.g. 9 South Gate Close, Akure" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Rent (₦ per year)</label>
+          <input type="number" class="form-input" id="to-rent" placeholder="e.g. 150000" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Lease Remaining (months)</label>
+          <input type="number" class="form-input" id="to-lease" placeholder="e.g. 6" min="1" max="12" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Walk to South Gate (min)</label>
+          <input type="number" class="form-input" id="to-south" placeholder="e.g. 5" min="1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Walk to North Gate (min)</label>
+          <input type="number" class="form-input" id="to-north" placeholder="e.g. 15" min="1" />
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg>
+        Description & Rules
+      </div>
+      <div class="form-group">
+        <label class="form-label">Room Description</label>
+        <textarea class="form-textarea" id="to-description" placeholder="Describe the room, its condition, and why you're leaving..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">House Rules</label>
+        <textarea class="form-textarea" id="to-rules" placeholder="e.g. No loud music after 10pm. Keep common areas clean." style="min-height:60px"></textarea>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M7 10l2.5 2.5L13 8"/></svg>
+        Amenities
+      </div>
+      <div class="amenities-checkboxes" id="to-amenities">
+        ${['Water supply', 'Security', 'Tiled floors', 'Fence & gate', 'Good ventilation', 'Shared kitchen', 'Furnished', 'Prepaid meter', 'Close to campus', 'Reading room', 'Parking space', 'Generator backup'].map(a => `
+          <label class="amenity-checkbox"><input type="checkbox" value="${a}" /> ${a}</label>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="16" height="16" rx="2"/><circle cx="7" cy="7" r="2"/><path d="M18 14l-5-5L2 18"/></svg>
+        Room Photos
+      </div>
+      <div class="image-upload-area" id="to-upload-area">
+        <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="32" height="32" rx="4"/><circle cx="14" cy="14" r="4"/><path d="M36 28L26 18 4 36"/></svg>
+        <p style="font-weight:600;margin-top:8px">Click to upload photos</p>
+        <p style="font-size:12px">Show the room's current condition</p>
+        <input type="file" id="to-images" multiple accept="image/*" style="display:none" />
+      </div>
+      <div class="image-previews" id="to-previews"></div>
+    </div>
+
+    <div class="form-error" id="to-error" style="display:none;margin-bottom:16px;font-size:14px"></div>
+    <button class="form-submit" id="to-submit">Post Room Takeover</button>
+    <p style="text-align:center;margin-top:12px;font-size:12px;color:var(--color-gray-400)">Your listing will be reviewed before going live</p>
+  `;
+
+  // Image upload
+  const uploadArea = page.querySelector('#to-upload-area');
+  const fileInput = page.querySelector('#to-images');
+  const previews = page.querySelector('#to-previews');
+  let uploadedImages = [];
+
+  uploadArea.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    Array.from(e.target.files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        uploadedImages.push(ev.target.result);
+        const preview = document.createElement('div');
+        preview.className = 'image-preview';
+        preview.innerHTML = `<img src="${ev.target.result}" alt="Preview" /><div class="image-preview-remove">×</div>`;
+        preview.querySelector('.image-preview-remove').addEventListener('click', () => {
+          const idx = uploadedImages.indexOf(ev.target.result);
+          if (idx > -1) uploadedImages.splice(idx, 1);
+          preview.remove();
+        });
+        previews.appendChild(preview);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  // Submit
+  page.querySelector('#to-submit').addEventListener('click', async () => {
+    const errEl = page.querySelector('#to-error');
+    const title = page.querySelector('#to-title').value.trim();
+    const type = page.querySelector('#to-type').value;
+    const area = page.querySelector('#to-area').value;
+    const address = page.querySelector('#to-address').value.trim();
+    const rent = parseInt(page.querySelector('#to-rent').value);
+    const lease = parseInt(page.querySelector('#to-lease').value);
+    const southMin = parseInt(page.querySelector('#to-south').value);
+    const northMin = parseInt(page.querySelector('#to-north').value);
+    const description = page.querySelector('#to-description').value.trim();
+    const rules = page.querySelector('#to-rules').value.trim();
+    const amenities = Array.from(page.querySelectorAll('#to-amenities input:checked')).map(i => i.value);
+
+    if (!title || !address || !rent || !lease) {
+      errEl.textContent = 'Please fill in title, address, rent, and lease remaining';
+      errEl.style.display = '';
+      return;
+    }
+
+    const images = uploadedImages.length > 0 ? uploadedImages : ['/images/property_1.png', '/images/property_2.png'];
+
+    await createTakeover({
+      studentId: user.id,
+      studentName: user.name,
+      studentPhone: user.phone,
+      title, apartmentType: type, area, address, rent,
+      leaseRemaining: lease,
+      gateDistances: {
+        southGate: `${southMin || '?'} min walk`,
+        northGate: `${northMin || '?'} min walk`
+      },
+      description,
+      houseRules: rules,
+      amenities,
+      images
+    });
+
+    showToast('Takeover posted for review! 🎉');
+    navigate('/dashboard');
+    location.reload();
+  });
+
+  return page;
+}
