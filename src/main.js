@@ -1,4 +1,5 @@
 import './index.css';
+import { injectSpeedInsights } from '@vercel/speed-insights';
 import { seedData } from './utils/store.js';
 import { onRouteChange, getCurrentRoute, matchRoute } from './utils/router.js';
 import { createHeader } from './components/header.js';
@@ -241,5 +242,8 @@ async function init() {
   }
   await render();
 }
+
+// Initialize Vercel Speed Insights
+injectSpeedInsights();
 
 init();
