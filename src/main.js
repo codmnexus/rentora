@@ -186,12 +186,12 @@ async function render() {
           'shared-room': 'Shared room', 'studio': 'Studio'
         };
         const type = typeMap[categoryId];
-        if (type) renderHomeGrid(allProps.filter(p => p.type === type));
-        else renderHomeGrid(allProps);
+        if (type) await renderHomeGrid(allProps.filter(p => p.type === type));
+        else await renderHomeGrid(allProps);
       }
     }));
     const defaultProps = await getApprovedProperties();
-    renderHomeGrid(defaultProps);
+    await renderHomeGrid(defaultProps);
     app.appendChild(createFooter());
   }
   } catch (routeError) {
@@ -215,11 +215,11 @@ async function render() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function renderHomeGrid(properties) {
+async function renderHomeGrid(properties) {
   const old = app.querySelector('.main-content');
   if (old) old.remove();
   const footer = app.querySelector('.footer');
-  const grid = createPropertyGrid(properties);
+  const grid = await createPropertyGrid(properties);
   if (footer) app.insertBefore(grid, footer);
   else app.appendChild(grid);
 }

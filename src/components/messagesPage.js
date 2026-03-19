@@ -72,7 +72,7 @@ export async function createMessagesPage() {
             ${escapeHTML(m.message)}
             <div class="chat-bubble-time">${new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
           </div>
-        `).join('')}}
+        `).join('')}
         ${messages.length === 0 ? '<div style="text-align:center;color:var(--color-gray-400);font-size:13px;margin:auto">Start the conversation</div>' : ''}
       </div>
       <div class="chat-input">
