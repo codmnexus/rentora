@@ -142,27 +142,27 @@ async function render() {
     app.appendChild(createCategoryFilter(async (categoryId) => {
       const allProps = await getApprovedProperties();
       if (categoryId === 'all') {
-        renderHomeGrid(allProps);
+        await renderHomeGrid(allProps);
       } else if (categoryId === 'near-campus') {
-        renderHomeGrid(allProps.filter(p => p.distanceFromCampus <= 1));
+        await renderHomeGrid(allProps.filter(p => p.distanceFromCampus <= 1));
       } else if (categoryId === 'verified') {
-        renderHomeGrid(allProps.filter(p => p.verified));
+        await renderHomeGrid(allProps.filter(p => p.verified));
       } else if (categoryId === 'budget') {
-        renderHomeGrid(allProps.filter(p => p.price <= 100000));
+        await renderHomeGrid(allProps.filter(p => p.price <= 100000));
       } else if (categoryId === 'furnished') {
-        renderHomeGrid(allProps.filter(p => p.furnished));
+        await renderHomeGrid(allProps.filter(p => p.furnished));
       } else {
         const typeMap = {
           'self-con': 'Self-con', 'single-room': 'Single room', 'flat': 'Flat',
           'shared-room': 'Shared room', 'studio': 'Studio'
         };
         const type = typeMap[categoryId];
-        if (type) renderHomeGrid(allProps.filter(p => p.type === type));
-        else renderHomeGrid(allProps);
+        if (type) await renderHomeGrid(allProps.filter(p => p.type === type));
+        else await renderHomeGrid(allProps);
       }
     }));
     const homeProps = await getApprovedProperties();
-    renderHomeGrid(homeProps);
+    await renderHomeGrid(homeProps);
     app.appendChild(createFooter());
 
   } else {
@@ -171,15 +171,15 @@ async function render() {
     app.appendChild(createCategoryFilter(async (categoryId) => {
       const allProps = await getApprovedProperties();
       if (categoryId === 'all') {
-        renderHomeGrid(allProps);
+        await renderHomeGrid(allProps);
       } else if (categoryId === 'near-campus') {
-        renderHomeGrid(allProps.filter(p => p.distanceFromCampus <= 1));
+        await renderHomeGrid(allProps.filter(p => p.distanceFromCampus <= 1));
       } else if (categoryId === 'verified') {
-        renderHomeGrid(allProps.filter(p => p.verified));
+        await renderHomeGrid(allProps.filter(p => p.verified));
       } else if (categoryId === 'budget') {
-        renderHomeGrid(allProps.filter(p => p.price <= 100000));
+        await renderHomeGrid(allProps.filter(p => p.price <= 100000));
       } else if (categoryId === 'furnished') {
-        renderHomeGrid(allProps.filter(p => p.furnished));
+        await renderHomeGrid(allProps.filter(p => p.furnished));
       } else {
         const typeMap = {
           'self-con': 'Self-con', 'single-room': 'Single room', 'flat': 'Flat',
