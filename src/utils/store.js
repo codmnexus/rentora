@@ -598,3 +598,67 @@ export async function seedData() {
 
   _set(KEYS.SEEDED, true);
 }
+
+// ============================================
+// WALLET & PAYMENTS
+// ============================================
+export async function getWallet() {
+  if (USE_FIREBASE) return fb.getWallet();
+  return { balance: 0 };
+}
+
+export async function initializePayment(data) {
+  if (USE_FIREBASE) return fb.initializePayment(data);
+  return { error: 'Payments not available in offline mode.' };
+}
+
+export async function getUserTransactions(userId) {
+  if (USE_FIREBASE) return fb.getUserTransactions(userId);
+  return [];
+}
+
+export async function createEscrow(data) {
+  if (USE_FIREBASE) return fb.createEscrow(data);
+  return { error: 'Escrow not available in offline mode.' };
+}
+
+export async function releaseEscrow(escrowId) {
+  if (USE_FIREBASE) return fb.releaseEscrow(escrowId);
+  return { error: 'Escrow not available in offline mode.' };
+}
+
+export async function getUserEscrows(userId) {
+  if (USE_FIREBASE) return fb.getUserEscrows(userId);
+  return [];
+}
+
+export async function requestWithdrawal(amount) {
+  if (USE_FIREBASE) return fb.requestWithdrawal(amount);
+  return { error: 'Withdrawals not available in offline mode.' };
+}
+
+export async function getUserWithdrawals(userId) {
+  if (USE_FIREBASE) return fb.getUserWithdrawals(userId);
+  return [];
+}
+
+export async function getAllEscrows() {
+  if (USE_FIREBASE) return fb.getAllEscrows();
+  return [];
+}
+
+export async function refundEscrow(escrowId) {
+  if (USE_FIREBASE) return fb.refundEscrow(escrowId);
+  return { error: 'Escrow not available in offline mode.' };
+}
+
+export async function getAllWithdrawals() {
+  if (USE_FIREBASE) return fb.getAllWithdrawals();
+  return [];
+}
+
+export async function approveWithdrawal(withdrawalId, action) {
+  if (USE_FIREBASE) return fb.approveWithdrawal(withdrawalId, action);
+  return { error: 'Withdrawals not available in offline mode.' };
+}
+

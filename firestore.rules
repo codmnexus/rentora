@@ -144,5 +144,55 @@ service cloud.firestore {
       allow delete: if isAuthenticated() &&
         resource.data.userId == request.auth.uid;
     }
+
+    // ============================================
+    // FINANCIAL COLLECTIONS (server-write only)
+    // Cloud Functions use Admin SDK → bypass rules
+    // ============================================
+
+    // ---- Wallets ----
+    // One per user. Balance managed exclusively by server.
+    match /wallets/{walletId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
+    // ---- Transactions ----
+    // Immutable ledger. Every balance change is logged here.
+    match /transactions/{txnId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
+    // ---- Escrow ----
+    // Visible to payer, receiver, and admin. Server-managed.
+    match /escrow/{escrowId} {
+      allow read: if isAuthenticated() && (
+        resource.data.payerId == request.auth.uid ||
+        resource.data.receiverId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create, update, delete: if false;
+    }
+
+    // ---- Payments ----
+    // Payment records from Paystack. Read-only for the payer.
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
+    // ---- Withdrawals ----
+    // Withdrawal requests. User reads own, admin reads all.
+    match /withdrawals/{withdrawalId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create, update, delete: if false;
+    }
   }
 }

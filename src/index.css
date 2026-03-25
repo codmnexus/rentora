@@ -5894,3 +5894,325 @@ textarea {
   font-weight: 500;
   margin-bottom: 12px;
 }
+
+/* ===== PAYMENT & ESCROW ===== */
+.payment-container {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+/* Escrow step tracker */
+.escrow-tracker {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: var(--space-6);
+  padding: var(--space-4) 0;
+}
+
+.escrow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  opacity: 0.4;
+  transition: opacity var(--transition-base);
+}
+
+.escrow-step.active {
+  opacity: 1;
+}
+
+.escrow-step.complete .escrow-step-icon {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+  border-color: #10B981;
+}
+
+.escrow-step-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--color-gray-50);
+  border: 2px solid var(--color-gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gray-500);
+  transition: all var(--transition-base);
+}
+
+.escrow-step.active .escrow-step-icon {
+  background: rgba(27, 46, 107, 0.08);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.escrow-step-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.escrow-step-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-gray-700);
+}
+
+.escrow-step-desc {
+  font-size: 10px;
+  color: var(--color-gray-400);
+  text-align: center;
+  max-width: 90px;
+  line-height: 1.3;
+}
+
+.escrow-connector {
+  width: 40px;
+  height: 2px;
+  background: var(--color-gray-200);
+  margin-top: 20px;
+  flex-shrink: 0;
+  transition: background var(--transition-base);
+}
+
+.escrow-connector.active {
+  background: var(--color-primary);
+}
+
+/* Escrow notice */
+.escrow-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(27, 46, 107, 0.05);
+  border: 1px solid rgba(27, 46, 107, 0.12);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-4);
+  font-size: 12px;
+  color: var(--color-gray-600);
+  line-height: 1.5;
+}
+
+.escrow-notice svg {
+  color: var(--color-primary);
+  margin-top: 1px;
+}
+
+/* Payment methods */
+.payment-methods {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.payment-method {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 2px solid var(--color-gray-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-gray-600);
+}
+
+.payment-method:hover {
+  border-color: var(--color-gray-300);
+}
+
+.payment-method.selected {
+  border-color: var(--color-primary);
+  background: rgba(27, 46, 107, 0.04);
+  color: var(--color-primary);
+}
+
+.payment-method input[type="radio"] {
+  display: none;
+}
+
+.payment-method svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Wallet Dashboard Tab */
+.wallet-section {
+  padding: var(--space-4) 0;
+}
+
+.wallet-balance-card {
+  background: var(--color-primary-gradient);
+  color: white;
+  border-radius: var(--radius-lg);
+  padding: var(--space-6) var(--space-8);
+  margin-bottom: var(--space-6);
+  position: relative;
+  overflow: hidden;
+}
+
+.wallet-balance-card::after {
+  content: '';
+  position: absolute;
+  top: -30%;
+  right: -10%;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+}
+
+.wallet-balance-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+
+.wallet-balance-amount {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.wallet-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.wallet-action-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: rgba(255,255,255,0.15);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wallet-action-btn:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* Transaction table */
+.txn-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.txn-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-gray-400);
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.txn-table td {
+  padding: 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--color-gray-50);
+  vertical-align: middle;
+}
+
+.txn-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.txn-type.deposit { background: rgba(16, 185, 129, 0.1); color: #059669; }
+.txn-type.escrow_hold { background: rgba(245, 158, 11, 0.1); color: #D97706; }
+.txn-type.escrow_release { background: rgba(59, 95, 212, 0.1); color: #3B5FD4; }
+.txn-type.withdraw { background: rgba(239, 68, 68, 0.1); color: #DC2626; }
+.txn-type.refund { background: rgba(139, 92, 246, 0.1); color: #7C3AED; }
+.txn-type.payment { background: rgba(27, 46, 107, 0.1); color: var(--color-primary); }
+.txn-type.fee { background: rgba(148, 163, 184, 0.1); color: var(--color-gray-500); }
+
+.txn-amount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.txn-amount.positive { color: #059669; }
+.txn-amount.negative { color: #DC2626; }
+
+.empty-wallet-state {
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
+  color: var(--color-gray-400);
+}
+
+.empty-wallet-state svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-4);
+  opacity: 0.3;
+}
+
+/* Escrow card (in dashboard) */
+.escrow-card {
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-100);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: box-shadow var(--transition-fast);
+}
+
+.escrow-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.escrow-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.escrow-status.held { background: rgba(245, 158, 11, 0.1); color: #D97706; }
+.escrow-status.released { background: rgba(16, 185, 129, 0.1); color: #059669; }
+.escrow-status.refunded { background: rgba(139, 92, 246, 0.1); color: #7C3AED; }
+
+@media(max-width: 600px) {
+  .payment-container { padding: var(--space-4); }
+  .payment-methods { flex-direction: column; }
+  .escrow-connector { width: 24px; }
+  .wallet-balance-card { padding: var(--space-4) var(--space-5); }
+  .wallet-balance-amount { font-size: 24px; }
+  .wallet-actions { flex-direction: column; }
+  .txn-table th, .txn-table td { padding: 8px; font-size: 12px; }
+  .escrow-card { flex-direction: column; gap: 12px; align-items: flex-start; }
+}

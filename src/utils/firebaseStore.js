@@ -7,6 +7,8 @@ import {
     collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc,
     query, where, orderBy, limit, serverTimestamp, increment
 } from 'firebase/firestore';
+
+
 import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
@@ -953,4 +955,164 @@ export async function seedData() {
     await signOut(auth);
 
     console.log('[Rentora] ✅ Firestore seed complete!');
+}
+
+// ============================================
+// WALLET & PAYMENTS (Vercel Serverless API)
+// ============================================
+
+/** Get Firebase ID token for authenticated API calls */
+async function getAuthHeaders() {
+    const user = auth.currentUser;
+    if (!user) throw new Error('Not authenticated');
+    const token = await user.getIdToken();
+    return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+}
+
+/** Make authenticated API call to Vercel serverless function */
+async function apiCall(path, options = {}) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`/api/${path}`, { ...options, headers: { ...headers, ...options.headers } });
+    return res.json();
+}
+
+// ---- Wallet ----
+export async function getWallet() {
+    try {
+        return await apiCall('wallet');
+    } catch (err) {
+        console.error('[Rentora] getWallet error:', err.message);
+        return { balance: 0 };
+    }
+}
+
+// ---- Initialize Payment (Paystack) ----
+export async function initializePayment({ amount, email, metadata = {} }) {
+    try {
+        return await apiCall('initialize-payment', {
+            method: 'POST',
+            body: JSON.stringify({ amount, email, metadata }),
+        });
+    } catch (err) {
+        console.error('[Rentora] initializePayment error:', err.message);
+        return { error: err.message };
+    }
+}
+
+// ---- Transactions (read from Firestore — allowed by RLS) ----
+export async function getUserTransactions(userId) {
+    try {
+        const snap = await getDocs(query(
+            collection(db, 'transactions'),
+            where('userId', '==', userId),
+            orderBy('createdAt', 'desc')
+        ));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+        console.error('[Rentora] getUserTransactions error:', err.message);
+        return [];
+    }
+}
+
+// ---- Escrow ----
+export async function createEscrow({ amount, receiverId, listingId }) {
+    try {
+        return await apiCall('create-escrow', {
+            method: 'POST',
+            body: JSON.stringify({ amount, receiverId, listingId }),
+        });
+    } catch (err) {
+        console.error('[Rentora] createEscrow error:', err.message);
+        return { error: err.message };
+    }
+}
+
+export async function releaseEscrow(escrowId) {
+    try {
+        return await apiCall('release-escrow', {
+            method: 'POST',
+            body: JSON.stringify({ escrowId }),
+        });
+    } catch (err) {
+        console.error('[Rentora] releaseEscrow error:', err.message);
+        return { error: err.message };
+    }
+}
+
+export async function getUserEscrows(userId) {
+    try {
+        const data = await apiCall('get-escrows');
+        return data.escrows || [];
+    } catch (err) {
+        console.error('[Rentora] getUserEscrows error:', err.message);
+        return [];
+    }
+}
+
+// ---- Withdrawals ----
+export async function requestWithdrawal(amount) {
+    try {
+        return await apiCall('request-withdrawal', {
+            method: 'POST',
+            body: JSON.stringify({ amount }),
+        });
+    } catch (err) {
+        console.error('[Rentora] requestWithdrawal error:', err.message);
+        return { error: err.message };
+    }
+}
+
+export async function getUserWithdrawals(userId) {
+    try {
+        const data = await apiCall('get-withdrawals');
+        return data.withdrawals || [];
+    } catch (err) {
+        console.error('[Rentora] getUserWithdrawals error:', err.message);
+        return [];
+    }
+}
+
+// ---- Admin: Escrows & Withdrawals ----
+export async function getAllEscrows() {
+    try {
+        const data = await apiCall('get-escrows');
+        return data.escrows || [];
+    } catch (err) {
+        console.error('[Rentora] getAllEscrows error:', err.message);
+        return [];
+    }
+}
+
+export async function refundEscrow(escrowId) {
+    try {
+        return await apiCall('refund-escrow', {
+            method: 'POST',
+            body: JSON.stringify({ escrowId }),
+        });
+    } catch (err) {
+        console.error('[Rentora] refundEscrow error:', err.message);
+        return { error: err.message };
+    }
+}
+
+export async function getAllWithdrawals() {
+    try {
+        const data = await apiCall('get-withdrawals');
+        return data.withdrawals || [];
+    } catch (err) {
+        console.error('[Rentora] getAllWithdrawals error:', err.message);
+        return [];
+    }
+}
+
+export async function approveWithdrawal(withdrawalId, action = 'approve') {
+    try {
+        return await apiCall('approve-withdrawal', {
+            method: 'POST',
+            body: JSON.stringify({ withdrawalId, action }),
+        });
+    } catch (err) {
+        console.error('[Rentora] approveWithdrawal error:', err.message);
+        return { error: err.message };
+    }
 }
