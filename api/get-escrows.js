@@ -1,10 +1,6 @@
-// GET /api/get-escrows
-// Auth: Bearer <Firebase ID Token>
-// Returns user's escrows (or all if admin)
+const { db, verifyAuth, cors } = require('./_lib/admin');
 
-import { db, verifyAuth, cors } from './_lib/admin.js';
-
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (cors(req, res)) return;
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -15,7 +11,6 @@ export default async function handler(req, res) {
   const isAdmin = userDoc.exists && userDoc.data().role === 'admin';
 
   let escrows;
-
   if (isAdmin) {
     const snap = await db.collection('escrow').orderBy('createdAt', 'desc').limit(100).get();
     escrows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -31,4 +26,4 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json({ escrows });
-}
+};

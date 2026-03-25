@@ -1,15 +1,11 @@
 // Shared Firebase Admin SDK singleton for Vercel Serverless Functions
-// Initialized with service account credentials from environment variables
-
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
+const { initializeApp, cert, getApps } = require('firebase-admin/app');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 
 let app;
-
 if (!getApps().length) {
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
+  const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
   app = initializeApp({
     credential: cert({
       projectId: process.env.FIREBASE_PROJECT_ID || 'rentoral',
@@ -21,51 +17,36 @@ if (!getApps().length) {
   app = getApps()[0];
 }
 
-export const db = getFirestore(app);
-export const adminAuth = getAuth(app);
-export { FieldValue };
+const db = getFirestore(app);
+const adminAuth = getAuth(app);
 
 // ---- Auth middleware ----
-export async function verifyAuth(req) {
+async function verifyAuth(req) {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   try {
-    const token = authHeader.split('Bearer ')[1];
-    return await adminAuth.verifyIdToken(token);
-  } catch {
-    return null;
-  }
+    return await adminAuth.verifyIdToken(authHeader.split('Bearer ')[1]);
+  } catch { return null; }
 }
 
 // ---- Helpers ----
-export function genRef(prefix = 'PAY') {
+function genRef(prefix = 'PAY') {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function logTransaction(t, { userId, type, amount, status, reference, metadata = {} }) {
+function logTransaction(t, { userId, type, amount, status, reference, metadata = {} }) {
   const txnRef = db.collection('transactions').doc();
-  t.set(txnRef, {
-    userId, type, amount, status,
-    reference: reference || genRef('TXN'),
-    metadata,
-    createdAt: FieldValue.serverTimestamp(),
-  });
+  t.set(txnRef, { userId, type, amount, status, reference: reference || genRef('TXN'), metadata, createdAt: FieldValue.serverTimestamp() });
   return txnRef.id;
 }
 
-export function auditLog(action, data) {
-  console.log(JSON.stringify({
-    severity: 'INFO', action,
-    timestamp: new Date().toISOString(),
-    ...data,
-  }));
+function auditLog(action, data) {
+  console.log(JSON.stringify({ severity: 'INFO', action, timestamp: new Date().toISOString(), ...data }));
 }
 
-// ---- Rate limiting (per-instance) ----
+// ---- Rate limiting ----
 const rateLimitMap = new Map();
-export function checkRateLimit(userId, maxReqs = 10, windowMs = 60000) {
+function checkRateLimit(userId, maxReqs = 10, windowMs = 60000) {
   const now = Date.now();
   const entry = rateLimitMap.get(userId);
   if (!entry || now - entry.windowStart > windowMs) {
@@ -77,34 +58,26 @@ export function checkRateLimit(userId, maxReqs = 10, windowMs = 60000) {
   return true;
 }
 
-// ---- CORS helper ----
-export function cors(req, res) {
+// ---- CORS ----
+function cors(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return true;
-  }
+  if (req.method === 'OPTIONS') { res.status(200).end(); return true; }
   return false;
 }
 
 // ---- Paystack API ----
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || '';
-const PAYSTACK_BASE = 'https://api.paystack.co';
 
-export async function paystackRequest(method, path, body = null) {
-  const response = await fetch(`${PAYSTACK_BASE}${path}`, {
+async function paystackRequest(method, path, body = null) {
+  const res = await fetch(`https://api.paystack.co${path}`, {
     method,
-    headers: {
-      Authorization: `Bearer ${PAYSTACK_SECRET}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { Authorization: `Bearer ${PAYSTACK_SECRET}`, 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
-  return response.json();
+  return res.json();
 }
 
-export { PAYSTACK_SECRET };
+module.exports = { db, adminAuth, FieldValue, verifyAuth, genRef, logTransaction, auditLog, checkRateLimit, cors, PAYSTACK_SECRET, paystackRequest };
