@@ -15,6 +15,7 @@ export async function createPaymentPage(propertyId) {
 
   const amount = property ? property.price : 0;
   const PAYSTACK_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '';
+  const isFundedRedirect = window.location.href.includes('funded=true');
 
   page.innerHTML = `
     <div class="payment-container">
@@ -191,21 +192,23 @@ export async function createPaymentPage(propertyId) {
       return;
     }
 
-    // Open Paystack checkout
-    if (PAYSTACK_KEY && typeof PaystackPop !== 'undefined') {
+    // Open Paystack checkout using access_code from server initialization
+    if (typeof PaystackPop !== 'undefined' && result.access_code) {
       const popup = new PaystackPop();
-      popup.newTransaction({
-        key: PAYSTACK_KEY,
-        email: user.email,
-        amount: fundAmount * 100,
-        ref: result.reference,
+      popup.resumeTransaction(result.access_code, {
         onSuccess: async () => {
-          showToast('Payment successful! Wallet will be updated shortly.', 'success');
-          // Refresh wallet balance
-          const updated = await getWallet();
-          page.querySelector('#wallet-balance').textContent = `₦${(updated.balance || 0).toLocaleString()}`;
+          showToast('Payment successful! Updating wallet...', 'success');
           page.querySelector('#fund-wallet-card').style.display = 'none';
           page.querySelector('#payment-form-card').style.display = '';
+          // Poll wallet balance — webhook needs a few seconds to process
+          for (let i = 0; i < 5; i++) {
+            await new Promise(r => setTimeout(r, 3000));
+            try {
+              const updated = await getWallet();
+              page.querySelector('#wallet-balance').textContent = `₦${(updated.balance || 0).toLocaleString()}`;
+              if ((updated.balance || 0) > (wallet.balance || 0)) break; // Balance increased
+            } catch { /* retry */ }
+          }
         },
         onCancel: () => {
           showToast('Payment cancelled', 'error');
@@ -214,7 +217,7 @@ export async function createPaymentPage(propertyId) {
         }
       });
     } else if (result.authorization_url) {
-      // Fallback: redirect to Paystack
+      // Fallback: redirect to Paystack (callback_url brings them back)
       window.location.href = result.authorization_url;
     } else {
       showToast('Payment provider not configured. Contact support.', 'error');
@@ -288,24 +291,32 @@ export async function createPaymentPage(propertyId) {
         return;
       }
 
-      if (PAYSTACK_KEY && typeof PaystackPop !== 'undefined') {
+      if (typeof PaystackPop !== 'undefined' && result.access_code) {
         const popup = new PaystackPop();
-        popup.newTransaction({
-          key: PAYSTACK_KEY,
-          email: user.email,
-          amount: payAmount * 100,
-          ref: result.reference,
+        popup.resumeTransaction(result.access_code, {
           onSuccess: async () => {
             page.querySelector('#payment-form-card').style.display = 'none';
             page.querySelector('#payment-success').style.display = '';
             if (!property) {
               page.querySelector('#success-title').textContent = 'Wallet Funded!';
-              page.querySelector('#success-desc').textContent = 'Your wallet balance will be updated shortly.';
+              page.querySelector('#success-desc').textContent = 'Your wallet balance is updating...';
             }
             page.querySelectorAll('.escrow-step').forEach(s => s.classList.add('active'));
             page.querySelectorAll('.escrow-connector').forEach(c => c.classList.add('active'));
             page.querySelector('#step-1').classList.add('complete');
             showToast('Payment successful!', 'success');
+            // Poll wallet balance
+            for (let i = 0; i < 5; i++) {
+              await new Promise(r => setTimeout(r, 3000));
+              try {
+                const updated = await getWallet();
+                page.querySelector('#wallet-balance').textContent = `₦${(updated.balance || 0).toLocaleString()}`;
+                if ((updated.balance || 0) > (wallet.balance || 0)) {
+                  if (!property) page.querySelector('#success-desc').textContent = `Your wallet has been funded with ₦${payAmount.toLocaleString()}.`;
+                  break;
+                }
+              } catch { /* retry */ }
+            }
           },
           onCancel: () => {
             showToast('Payment cancelled', 'error');
@@ -325,6 +336,31 @@ export async function createPaymentPage(propertyId) {
 
   // Dashboard
   page.querySelector('#pay-dashboard')?.addEventListener('click', () => navigate('/dashboard'));
+
+  // Handle return from Paystack redirect
+  if (isFundedRedirect) {
+    setTimeout(async () => {
+      page.querySelector('#payment-form-card').style.display = 'none';
+      page.querySelector('#payment-success').style.display = '';
+      page.querySelector('#success-title').textContent = 'Payment Successful!';
+      page.querySelector('#success-desc').textContent = 'Updating your wallet balance...';
+      page.querySelectorAll('.escrow-step').forEach(s => s.classList.add('active'));
+      page.querySelector('#step-1').classList.add('complete');
+      showToast('Payment received!', 'success');
+      // Poll for updated balance
+      for (let i = 0; i < 5; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        try {
+          const updated = await getWallet();
+          page.querySelector('#wallet-balance').textContent = `₦${(updated.balance || 0).toLocaleString()}`;
+          if ((updated.balance || 0) > (wallet.balance || 0)) {
+            page.querySelector('#success-desc').textContent = 'Your wallet balance has been updated!';
+            break;
+          }
+        } catch { /* retry */ }
+      }
+    }, 500);
+  }
 
   return page;
 }

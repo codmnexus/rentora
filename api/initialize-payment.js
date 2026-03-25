@@ -19,8 +19,12 @@ module.exports = async function handler(req, res) {
 
   auditLog('payment_initiated', { userId: user.uid, amount, reference });
 
+  // Build callback URL so Paystack redirects back to the site after payment
+  const origin = req.headers.origin || req.headers.referer || 'https://rentora-app.vercel.app';
+  const callbackUrl = `${origin.replace(/\/$/, '')}/#/payment?funded=true`;
+
   const result = await paystackRequest('POST', '/transaction/initialize', {
-    email, amount: amount * 100, reference, metadata: { userId: user.uid, ...metadata },
+    email, amount: amount * 100, reference, callback_url: callbackUrl, metadata: { userId: user.uid, ...metadata },
   });
 
   if (!result.status) {
