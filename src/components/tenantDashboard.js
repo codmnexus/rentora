@@ -45,7 +45,7 @@ export async function createTenantDashboard() {
         <div class="stat-card-value">${myTakeovers.length}</div>
         <div class="stat-card-label">Takeover Posts</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" id="tenant-wallet-stat" style="cursor:pointer">
         <div class="stat-card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 100 4 2 2 0 000-4z"/></svg></div>
         <div class="stat-card-value" id="stat-wallet-balance">₦${(wallet.balance || 0).toLocaleString()}</div>
         <div class="stat-card-label">Wallet Balance</div>
@@ -289,7 +289,7 @@ export async function createTenantDashboard() {
     const statBal = page.querySelector('#stat-wallet-balance');
     if (statBal) statBal.textContent = `₦${(freshWallet.balance || 0).toLocaleString()}`;
 
-    tabContent.querySelector('#dash-fund-btn')?.addEventListener('click', () => navigate('/payment'));
+    tabContent.querySelector('#dash-fund-btn')?.addEventListener('click', () => navigate('/payments'));
   }
 
   tabs.forEach(tab => {
@@ -305,6 +305,7 @@ export async function createTenantDashboard() {
     });
   });
 
+  page.querySelector('#tenant-wallet-stat')?.addEventListener('click', () => navigate('/payments'));
   page.querySelector('#post-takeover-btn').addEventListener('click', () => navigate('/post-takeover'));
   renderSaved();
   return page;

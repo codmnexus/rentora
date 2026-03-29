@@ -1,4 +1,4 @@
-import { getCurrentUser, getPropertiesByLandlord, getConversations, getPropertyById, deleteProperty, markAsRented, markAsAvailable, getInspectionsByLandlord, approveInspection, rescheduleInspection } from '../utils/store.js';
+import { getCurrentUser, getPropertiesByLandlord, getConversations, getPropertyById, deleteProperty, markAsRented, markAsAvailable, getInspectionsByLandlord, approveInspection, rescheduleInspection, getWallet, getUserTransactions } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
 import { escapeHTML } from '../utils/authSecurity.js';
@@ -10,6 +10,7 @@ export async function createLandlordDashboard() {
   const properties = await getPropertiesByLandlord(user.id);
   const convos = await getConversations(user.id);
   const inspections = await getInspectionsByLandlord(user.id);
+  const wallet = await getWallet();
   const formatPrice = (p) => '₦' + p.toLocaleString();
 
   const page = document.createElement('div');
@@ -42,11 +43,17 @@ export async function createLandlordDashboard() {
         <div class="stat-card-value">${convos.length}</div>
         <div class="stat-card-label">Inquiries</div>
       </div>
+      <div class="stat-card" id="ll-wallet-stat" style="cursor:pointer">
+        <div class="stat-card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><circle cx="18" cy="14" r="2"/></svg></div>
+        <div class="stat-card-value" id="ll-wallet-balance">₦${(wallet.balance || 0).toLocaleString()}</div>
+        <div class="stat-card-label">Wallet Balance</div>
+      </div>
     </div>
 
     <div class="dashboard-tabs">
       <div class="dashboard-tab active" data-tab="listings">My Listings</div>
       <div class="dashboard-tab" data-tab="inspections">Inspection Requests (${inspections.filter(i => i.status === 'pending').length})</div>
+      <div class="dashboard-tab" data-tab="payments">Payments</div>
     </div>
 
     <div id="tab-content"></div>
@@ -126,15 +133,78 @@ export async function createLandlordDashboard() {
     table.querySelectorAll('[data-cancel-insp]').forEach(btn => btn.addEventListener('click', async () => { await rescheduleInspection(btn.dataset.cancelInsp, '', ''); showToast('Inspection declined', 'error'); renderInspections(); }));
   }
 
+  async function renderPaymentsPreview() {
+    tabContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--color-gray-400)">Loading...</div>';
+    const freshWallet = await getWallet();
+    const transactions = await getUserTransactions(user.id);
+    const recent = transactions.slice(0, 5);
+
+    tabContent.innerHTML = `
+      <div class="payments-preview-section">
+        <div class="payments-preview-wallet">
+          <div class="payments-preview-bal">
+            <div class="payments-preview-bal-label">Available Balance</div>
+            <div class="payments-preview-bal-value">₦${(freshWallet.balance || 0).toLocaleString()}</div>
+          </div>
+          <button class="payments-preview-cta" id="ll-goto-payments">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><circle cx="18" cy="14" r="2"/></svg>
+            Go to Payments Hub →
+          </button>
+        </div>
+
+        ${recent.length === 0 ? `
+          <div class="no-results" style="margin-top:20px">
+            <h3>No transactions yet</h3>
+            <p>Your payment history will appear here once you receive rent payments</p>
+          </div>
+        ` : `
+          <h4 style="font-size:15px;font-weight:700;margin:20px 0 12px;color:var(--color-gray-700)">Recent Activity</h4>
+          <div class="payments-tx-list">
+            ${recent.map(t => {
+              const isCredit = ['deposit', 'escrow_release', 'refund'].includes(t.type);
+              const colorClass = isCredit ? 'credit' : 'debit';
+              const sign = isCredit ? '+' : '-';
+              const amount = Math.abs(t.amount);
+              const typeLabels = { deposit: 'Deposit', payment: 'Payment', escrow_hold: 'Escrow Hold', escrow_release: 'Escrow Release', refund: 'Refund', withdraw: 'Withdrawal', fee: 'Fee' };
+              const date = t.createdAt?.toDate ? t.createdAt.toDate().toLocaleDateString('en-NG', { day: 'numeric', month: 'short' }) : t.createdAt?.seconds ? new Date(t.createdAt.seconds * 1000).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' }) : '';
+              return `
+                <div class="payments-tx-item">
+                  <div class="payments-tx-icon ${colorClass}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                      ${isCredit ? '<path d="M12 19V5M5 12l7-7 7 7"/>' : '<path d="M12 5v14M19 12l-7 7-7-7"/>'}
+                    </svg>
+                  </div>
+                  <div class="payments-tx-info">
+                    <div class="payments-tx-type">${typeLabels[t.type] || t.type}</div>
+                    <div class="payments-tx-date">${date}</div>
+                  </div>
+                  <div class="payments-tx-right">
+                    <div class="payments-tx-amount ${colorClass}">${sign}₦${amount.toLocaleString()}</div>
+                    <div class="payments-tx-status"><span class="status-badge ${t.status}">${t.status}</span></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          ${transactions.length > 5 ? '<p style="text-align:center;margin-top:12px;font-size:13px;color:var(--color-gray-400)">Showing 5 of ' + transactions.length + ' transactions</p>' : ''}
+        `}
+      </div>
+    `;
+
+    tabContent.querySelector('#ll-goto-payments')?.addEventListener('click', () => navigate('/payments'));
+  }
+
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       if (tab.dataset.tab === 'listings') renderListings();
+      else if (tab.dataset.tab === 'payments') renderPaymentsPreview();
       else renderInspections();
     });
   });
 
+  page.querySelector('#ll-wallet-stat')?.addEventListener('click', () => navigate('/payments'));
   page.querySelector('#add-property-btn').addEventListener('click', () => navigate('/post-property'));
   renderListings();
   return page;

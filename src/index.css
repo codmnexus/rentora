@@ -7080,3 +7080,69 @@ textarea {
     font-size: 11px
   }
 }
+
+/* ===== PAYMENTS PREVIEW (Dashboard Inline) ===== */
+.payments-preview-section {
+  max-width: 720px
+}
+
+.payments-preview-wallet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, var(--color-gray-800), #1a1f3d);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  color: white;
+  flex-wrap: wrap;
+  gap: var(--space-4)
+}
+
+.payments-preview-bal-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.7
+}
+
+.payments-preview-bal-value {
+  font-size: 28px;
+  font-weight: 800;
+  margin-top: 4px
+}
+
+.payments-preview-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--color-primary), #5b73e8);
+  color: white;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(59, 95, 212, 0.4)
+}
+
+.payments-preview-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(59, 95, 212, 0.5)
+}
+
+@media (max-width: 480px) {
+  .payments-preview-wallet {
+    flex-direction: column;
+    text-align: center
+  }
+
+  .payments-preview-cta {
+    width: 100%;
+    justify-content: center
+  }
+}
