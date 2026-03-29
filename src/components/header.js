@@ -1,10 +1,11 @@
-import { getCurrentUser, logoutUser } from '../utils/store.js';
+import { getCurrentUser, logoutUser, getWallet } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { createNotificationBell } from './notificationCenter.js';
 import { escapeHTML } from '../utils/authSecurity.js';
 
 export async function createHeader() {
   const user = await getCurrentUser();
+  const wallet = user ? await getWallet() : null;
   const header = document.createElement('header');
   header.className = 'header';
   header.innerHTML = `
@@ -31,23 +32,99 @@ export async function createHeader() {
             <div class="user-menu-hamburger"><span></span><span></span><span></span></div>
             <div class="user-menu-avatar${user ? ' logged-in' : ''}">${user ? escapeHTML(user.avatar || user.name.charAt(0)) : '<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zM2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>'}</div>
           </button>
-          <div class="user-dropdown" id="user-dropdown">
+          <div class="account-panel" id="user-dropdown">
             ${user ? `
-              <button class="user-dropdown-item bold">${escapeHTML(user.name)}</button>
-              <div class="user-dropdown-divider"></div>
-              ${user.role === 'tenant' ? '<button class="user-dropdown-item" data-route="/dashboard">My Dashboard</button>' : ''}
-              ${user.role === 'landlord' ? '<button class="user-dropdown-item" data-route="/landlord">Landlord Dashboard</button>' : ''}
-              ${user.role === 'admin' ? '<button class="user-dropdown-item" data-route="/admin">Admin Panel</button>' : ''}
-              <button class="user-dropdown-item" data-route="/messages">Messages</button>
-              <button class="user-dropdown-item" data-route="/dashboard">Saved Homes</button>
-              <div class="user-dropdown-divider"></div>
-              <button class="user-dropdown-item" id="logout-btn">Log out</button>
+              <div class="account-panel-profile">
+                <div class="account-panel-avatar-wrap">
+                  <div class="account-panel-avatar">${escapeHTML(user.avatar || user.name.charAt(0))}</div>
+                  <div class="account-panel-online"></div>
+                </div>
+                <div class="account-panel-info">
+                  <div class="account-panel-name">${escapeHTML(user.name)}</div>
+                  <div class="account-panel-role">${user.role === 'tenant' ? 'Tenant' : user.role === 'landlord' ? 'Landlord' : 'Admin'}</div>
+                  <div class="account-panel-id">Account ID ${escapeHTML(user.id ? user.id.substring(0, 12) : '—')}</div>
+                </div>
+              </div>
+
+              <div class="account-panel-divider"></div>
+
+              <div class="account-panel-balance-row">
+                <span class="account-panel-balance-label">Wallet Balance</span>
+                <span class="account-panel-balance-value">₦${(wallet?.balance || 0).toLocaleString()}</span>
+              </div>
+
+              <div class="account-panel-balance-row">
+                <span class="account-panel-balance-label">Rentora Points</span>
+                <span class="account-panel-points-badge">
+                  <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="8" y="11" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor">R</text></svg>
+                  0
+                </span>
+              </div>
+
+              <button class="account-panel-referral" data-route="/dashboard">
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11v2a4 4 0 01-4 4H5a4 4 0 01-4-4v-2"/><path d="M12 3l4 4-4 4"/><path d="M16 7H6"/></svg>
+                Invite friends & start earning!
+              </button>
+
+              <div class="account-panel-divider"></div>
+
+              <nav class="account-panel-nav">
+                <button class="account-panel-nav-item" data-route="${user.role === 'tenant' ? '/dashboard' : user.role === 'landlord' ? '/landlord' : '/admin'}">
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+                  Overview
+                </button>
+
+                <button class="account-panel-nav-item" data-route="${user.role === 'tenant' ? '/dashboard' : '/landlord'}">
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l7-7 7 7v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9z"/><path d="M8 18V12h4v6"/></svg>
+                  Dashboard
+                </button>
+
+                <button class="account-panel-nav-item" data-route="/messages">
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 13a2 2 0 01-2 2H6l-4 4V5a2 2 0 012-2h12a2 2 0 012 2z"/></svg>
+                  Messages
+                </button>
+
+                ${user.role === 'landlord' || user.role === 'admin' ? `
+                <button class="account-panel-nav-item account-panel-nav-expandable" id="account-panel-selling">
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M8 4v-2h4v2"/><path d="M4 8h12"/></svg>
+                  Listings
+                  <svg class="account-panel-chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4l4 4-4 4"/></svg>
+                </button>
+                ` : ''}
+
+                <button class="account-panel-nav-item" data-route="/payments">
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><circle cx="18" cy="14" r="2"/></svg>
+                  Payments
+                </button>
+
+                <div class="account-panel-divider"></div>
+
+                <button class="account-panel-nav-item" id="logout-btn">
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18H5a2 2 0 01-2-2V4a2 2 0 012-2h4"/><path d="M14 15l5-5-5-5"/><path d="M19 10H9"/></svg>
+                  Log out
+                </button>
+              </nav>
             ` : `
-              <button class="user-dropdown-item bold" data-route="/login">Sign up</button>
-              <button class="user-dropdown-item" data-route="/login">Log in</button>
-              <div class="user-dropdown-divider"></div>
-              <button class="user-dropdown-item" data-route="/login">List your property</button>
-              <button class="user-dropdown-item">Help Center</button>
+              <div class="account-panel-guest">
+                <div class="account-panel-guest-icon">
+                  <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M3 21c0-4.97 4.03-9 9-9s9 4.03 9 9"/></svg>
+                </div>
+                <p class="account-panel-guest-text">Sign in to access your dashboard, wallet, and messages.</p>
+              </div>
+              <button class="account-panel-referral" data-route="/login" style="margin-top:8px">Sign Up</button>
+              <button class="account-panel-nav-item" data-route="/login" style="margin-top:4px">
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+                Log In
+              </button>
+              <div class="account-panel-divider"></div>
+              <button class="account-panel-nav-item" data-route="/login">
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l7-7 7 7v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9z"/></svg>
+                List your property
+              </button>
+              <button class="account-panel-nav-item" data-route="/info/help">
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 14v-1"/><path d="M8 7.5a2.5 2.5 0 014.5 1.5c0 1.5-2 2-2 3"/></svg>
+                Help Center
+              </button>
             `}
           </div>
         </div>

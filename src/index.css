@@ -334,6 +334,245 @@ textarea {
   margin: var(--space-1) 0
 }
 
+/* ===== ACCOUNT PANEL (G2G-Style Wallet Dropdown) ===== */
+.account-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  background: #1a1d23;
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  overflow-y: auto;
+  max-height: 85vh;
+  opacity: 0;
+  transform: translateY(-10px) scale(0.96);
+  pointer-events: none;
+  transition: all var(--transition-base);
+  z-index: 200;
+  padding: var(--space-5)
+}
+
+.account-panel.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto
+}
+
+/* Profile Section */
+.account-panel-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4)
+}
+
+.account-panel-avatar-wrap {
+  position: relative;
+  flex-shrink: 0
+}
+
+.account-panel-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3B5FD4, #7C3AED);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 2px solid rgba(255, 255, 255, 0.15)
+}
+
+.account-panel-online {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #22C55E;
+  border: 2.5px solid #1a1d23
+}
+
+.account-panel-info {
+  min-width: 0
+}
+
+.account-panel-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f1f1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.account-panel-role {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 1px
+}
+
+.account-panel-id {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 2px;
+  font-family: 'SF Mono', 'Fira Code', monospace
+}
+
+/* Divider */
+.account-panel-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: var(--space-3) 0
+}
+
+/* Balance Rows */
+.account-panel-balance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0
+}
+
+.account-panel-balance-label {
+  font-size: 14px;
+  color: #d1d5db;
+  font-weight: 500
+}
+
+.account-panel-balance-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #22C55E;
+  letter-spacing: -0.3px
+}
+
+.account-panel-points-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.1);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill)
+}
+
+/* Referral CTA */
+.account-panel-referral {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: linear-gradient(135deg, #7C3AED, #6D28D9);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-top: var(--space-3);
+  letter-spacing: 0.2px
+}
+
+.account-panel-referral:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+  background: linear-gradient(135deg, #8B5CF6, #7C3AED)
+}
+
+/* Navigation Items */
+.account-panel-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px
+}
+
+.account-panel-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-3);
+  font-size: 14px;
+  font-weight: 500;
+  color: #d1d5db;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: inherit;
+  position: relative
+}
+
+.account-panel-nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f9fafb
+}
+
+.account-panel-nav-item svg {
+  flex-shrink: 0;
+  opacity: 0.7
+}
+
+.account-panel-nav-item:hover svg {
+  opacity: 1
+}
+
+.account-panel-chevron {
+  position: absolute;
+  right: var(--space-3);
+  transition: transform var(--transition-fast)
+}
+
+.account-panel-nav-expandable:hover .account-panel-chevron {
+  transform: rotate(90deg)
+}
+
+/* Guest State */
+.account-panel-guest {
+  text-align: center;
+  padding: var(--space-4) 0
+}
+
+.account-panel-guest-icon {
+  color: #6b7280;
+  margin-bottom: var(--space-3)
+}
+
+.account-panel-guest-text {
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.5
+}
+
+/* Scrollbar for account panel */
+.account-panel::-webkit-scrollbar {
+  width: 4px
+}
+
+.account-panel::-webkit-scrollbar-track {
+  background: transparent
+}
+
+.account-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px
+}
+
 /* ===== HERO / LANDING ===== */
 .hero {
   background: linear-gradient(135deg, #EEF0F8 0%, #E8EBF4 30%, #E0E4F0 100%);
@@ -6215,4 +6454,629 @@ textarea {
   .wallet-actions { flex-direction: column; }
   .txn-table th, .txn-table td { padding: 8px; font-size: 12px; }
   .escrow-card { flex-direction: column; gap: 12px; align-items: flex-start; }
+}
+
+/* ===== PAYMENTS HUB ===== */
+.payments-hub {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-6)
+}
+
+/* Overview Grid */
+.payments-overview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8)
+}
+
+/* Wallet Card */
+.payments-wallet-card {
+  background: linear-gradient(135deg, #0F1D47 0%, #1B2E6B 40%, #243B8C 100%);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  position: relative;
+  overflow: hidden
+}
+
+.payments-wallet-card::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(59, 95, 212, 0.3) 0%, transparent 70%);
+  pointer-events: none
+}
+
+.payments-wallet-card::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -10%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.2) 0%, transparent 70%);
+  pointer-events: none
+}
+
+.payments-wallet-card-inner {
+  position: relative;
+  z-index: 1
+}
+
+.payments-wallet-logo {
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: var(--space-4)
+}
+
+.payments-wallet-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: var(--space-2)
+}
+
+.payments-wallet-amount {
+  font-size: 36px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -1px;
+  margin-bottom: var(--space-6)
+}
+
+.payments-wallet-actions {
+  display: flex;
+  gap: var(--space-3)
+}
+
+.payments-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit
+}
+
+.payments-action-btn.primary {
+  background: white;
+  color: var(--color-primary-dark)
+}
+
+.payments-action-btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2)
+}
+
+.payments-action-btn.secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.25)
+}
+
+.payments-action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.25)
+}
+
+/* Stat Cards */
+.payments-stat-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  justify-content: center
+}
+
+.payments-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-100);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base)
+}
+
+.payments-stat:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px)
+}
+
+.payments-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0
+}
+
+.payments-stat-icon.income {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a
+}
+
+.payments-stat-icon.expense {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626
+}
+
+.payments-stat-icon.escrow {
+  background: rgba(59, 95, 212, 0.1);
+  color: var(--color-accent)
+}
+
+.payments-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-gray-800)
+}
+
+.payments-stat-label {
+  font-size: 12px;
+  color: var(--color-gray-400);
+  font-weight: 500;
+  margin-top: 2px
+}
+
+/* Filter Chips */
+.payments-filter-bar {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  padding: var(--space-1) 0
+}
+
+.payments-filter-chip {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-gray-500);
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit
+}
+
+.payments-filter-chip:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary)
+}
+
+.payments-filter-chip.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary)
+}
+
+/* Transaction List */
+.payments-tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-100);
+  border-radius: var(--radius-md);
+  overflow: hidden
+}
+
+.payments-tx-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  transition: background var(--transition-fast);
+  border-bottom: 1px solid var(--color-gray-50)
+}
+
+.payments-tx-item:last-child {
+  border-bottom: none
+}
+
+.payments-tx-item:hover {
+  background: var(--color-gray-50)
+}
+
+.payments-tx-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0
+}
+
+.payments-tx-icon.credit {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a
+}
+
+.payments-tx-icon.debit {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626
+}
+
+.payments-tx-info {
+  flex: 1;
+  min-width: 0
+}
+
+.payments-tx-type {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-gray-800)
+}
+
+.payments-tx-date {
+  font-size: 12px;
+  color: var(--color-gray-400);
+  margin-top: 2px
+}
+
+.payments-tx-right {
+  text-align: right;
+  flex-shrink: 0
+}
+
+.payments-tx-amount {
+  font-size: 15px;
+  font-weight: 700
+}
+
+.payments-tx-amount.credit {
+  color: #16a34a
+}
+
+.payments-tx-amount.debit {
+  color: #dc2626
+}
+
+.payments-tx-status {
+  margin-top: 4px
+}
+
+/* Escrow Cards */
+.payments-escrow-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4)
+}
+
+.payments-escrow-card {
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-100);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base)
+}
+
+.payments-escrow-card:hover {
+  box-shadow: var(--shadow-md)
+}
+
+.payments-escrow-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4)
+}
+
+.payments-escrow-amount {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-primary)
+}
+
+.payments-escrow-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-gray-100)
+}
+
+.payments-escrow-detail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--color-gray-500)
+}
+
+/* Escrow Progress Tracker */
+.payments-escrow-progress {
+  display: flex;
+  align-items: center;
+  gap: 0
+}
+
+.payments-escrow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  position: relative;
+  flex-shrink: 0
+}
+
+.payments-escrow-step span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-gray-400);
+  white-space: nowrap
+}
+
+.payments-escrow-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-gray-200);
+  border: 3px solid var(--color-gray-200);
+  transition: all var(--transition-base)
+}
+
+.payments-escrow-step.active .payments-escrow-dot {
+  background: var(--color-warning);
+  border-color: rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1)
+}
+
+.payments-escrow-step.active span {
+  color: var(--color-warning)
+}
+
+.payments-escrow-step.done .payments-escrow-dot {
+  background: var(--color-success);
+  border-color: rgba(34, 197, 94, 0.3)
+}
+
+.payments-escrow-step.done span {
+  color: var(--color-success)
+}
+
+.payments-escrow-line {
+  flex: 1;
+  height: 3px;
+  background: var(--color-gray-200);
+  min-width: 20px;
+  margin-bottom: 18px;
+  border-radius: 2px;
+  transition: background var(--transition-base)
+}
+
+.payments-escrow-line.done {
+  background: var(--color-success)
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .payments-overview {
+    grid-template-columns: 1fr
+  }
+
+  .payments-wallet-amount {
+    font-size: 28px
+  }
+
+  .payments-wallet-actions {
+    flex-direction: column
+  }
+
+  .payments-stat-cards {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: var(--space-3);
+    padding-bottom: var(--space-2)
+  }
+
+  .payments-stat {
+    min-width: 160px;
+    flex-shrink: 0
+  }
+
+  .payments-tx-item {
+    padding: var(--space-3) var(--space-4)
+  }
+
+  .payments-tx-icon {
+    width: 36px;
+    height: 36px
+  }
+
+  .payments-escrow-card {
+    padding: var(--space-4)
+  }
+
+  .payments-escrow-amount {
+    font-size: 18px
+  }
+
+  .payments-escrow-details {
+    flex-direction: column;
+    gap: var(--space-2)
+  }
+}
+
+/* ===== PAYMENTS MODALS ===== */
+.ph-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  opacity: 0;
+  transition: opacity 0.2s ease
+}
+
+.ph-modal-overlay.active {
+  opacity: 1
+}
+
+.ph-modal {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 440px;
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.2s ease;
+  overflow: hidden
+}
+
+.ph-modal-overlay.active .ph-modal {
+  transform: scale(1) translateY(0)
+}
+
+.ph-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--color-gray-100)
+}
+
+.ph-modal-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-gray-800);
+  margin: 0
+}
+
+.ph-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-gray-50);
+  color: var(--color-gray-500);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast)
+}
+
+.ph-modal-close:hover {
+  background: var(--color-gray-100);
+  color: var(--color-gray-800)
+}
+
+.ph-modal-body {
+  padding: var(--space-6)
+}
+
+.ph-modal-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-gray-600);
+  margin-bottom: var(--space-2);
+  margin-top: var(--space-4)
+}
+
+.ph-modal-label:first-child {
+  margin-top: 0
+}
+
+.ph-modal-body .form-input {
+  margin-bottom: 0
+}
+
+.ph-modal-hint {
+  font-size: 12px;
+  color: var(--color-gray-400);
+  margin: var(--space-4) 0;
+  line-height: 1.5
+}
+
+/* Quick Amount Chips */
+.ph-quick-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3)
+}
+
+.ph-quick-btn {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: rgba(59, 95, 212, 0.08);
+  border: 1px solid rgba(59, 95, 212, 0.2);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit
+}
+
+.ph-quick-btn:hover {
+  background: rgba(59, 95, 212, 0.15);
+  border-color: var(--color-primary)
+}
+
+.ph-quick-btn.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary)
+}
+
+/* Withdraw Balance Display */
+.ph-withdraw-balance {
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-100);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-size: 14px;
+  color: var(--color-gray-500);
+  margin-bottom: var(--space-4)
+}
+
+.ph-withdraw-balance strong {
+  color: var(--color-primary);
+  font-weight: 700
+}
+
+@media (max-width: 480px) {
+  .ph-modal {
+    max-width: 100%;
+    border-radius: var(--radius-md)
+  }
+
+  .ph-modal-body {
+    padding: var(--space-4)
+  }
+
+  .ph-quick-amounts {
+    gap: var(--space-1)
+  }
+
+  .ph-quick-btn {
+    padding: 6px 10px;
+    font-size: 11px
+  }
 }

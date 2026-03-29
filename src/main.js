@@ -19,6 +19,7 @@ import { createTakeoverListings } from './components/takeoverListings.js';
 import { createTakeoverDetail } from './components/takeoverDetail.js';
 import { createPostTakeover } from './components/postTakeover.js';
 import { createPaymentPage } from './components/paymentPage.js';
+import { createPaymentsHub } from './components/paymentsHub.js';
 import { getApprovedProperties, getCurrentUser } from './utils/store.js';
 import { createLandingPage } from './components/landingPage.js';
 import { createInfoPage } from './components/infoPages.js';
@@ -66,6 +67,10 @@ async function render() {
 
   } else if (takeoverMatch) {
     app.appendChild(await createTakeoverDetail(takeoverMatch.id));
+    app.appendChild(createFooter());
+
+  } else if (route.path === '/payments') {
+    app.appendChild(await createPaymentsHub());
     app.appendChild(createFooter());
 
   } else if (paymentMatch) {
