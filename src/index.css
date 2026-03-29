@@ -7146,3 +7146,379 @@ textarea {
     justify-content: center
   }
 }
+
+/* ===== ONBOARDING WIZARD ===== */
+.onboarding-container {
+  position: relative
+}
+
+/* Progress Bar */
+.onboarding-progress {
+  position: relative;
+  margin-bottom: var(--space-6);
+  padding-top: var(--space-2)
+}
+
+.onboarding-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), #5b73e8);
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 0
+}
+
+.onboarding-steps-indicator {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  padding-top: var(--space-3)
+}
+
+.onboarding-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-gray-100);
+  color: var(--color-gray-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  position: relative
+}
+
+.onboarding-step-dot.active {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: 0 0 0 4px rgba(59, 95, 212, 0.15);
+  transform: scale(1.1)
+}
+
+.onboarding-step-dot.done {
+  background: var(--color-success);
+  color: white
+}
+
+.onboarding-step-dot.done span {
+  display: none
+}
+
+.onboarding-step-dot.done::after {
+  content: '✓';
+  font-size: 13px;
+  font-weight: 800
+}
+
+/* Step Viewport & Animations */
+.onboarding-viewport {
+  min-height: 280px
+}
+
+.onboarding-viewport.slide-in-right {
+  animation: obSlideInRight 0.3s ease forwards
+}
+
+.onboarding-viewport.slide-in-left {
+  animation: obSlideInLeft 0.3s ease forwards
+}
+
+@keyframes obSlideInRight {
+  from { opacity: 0; transform: translateX(30px) }
+  to { opacity: 1; transform: translateX(0) }
+}
+
+@keyframes obSlideInLeft {
+  from { opacity: 0; transform: translateX(-30px) }
+  to { opacity: 1; transform: translateX(0) }
+}
+
+/* Step Header */.ob-step-header {
+  margin-bottom: var(--space-5)
+}
+
+.ob-step-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3)
+}
+
+.ob-step-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-primary);
+  background: rgba(59, 95, 212, 0.08);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill)
+}
+
+.ob-step-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--color-gray-800);
+  margin: 0 0 4px
+}
+
+.ob-step-subtitle {
+  font-size: 13px;
+  color: var(--color-gray-400);
+  margin: 0
+}
+
+/* Back Button */
+.ob-back-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-gray-100);
+  background: white;
+  color: var(--color-gray-500);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast)
+}
+
+.ob-back-btn:hover {
+  background: var(--color-gray-50);
+  color: var(--color-gray-800);
+  border-color: var(--color-gray-200)
+}
+
+/* Role Selection Cards */
+.ob-role-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4)
+}
+
+.ob-role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  border: 2px solid var(--color-gray-100);
+  border-radius: var(--radius-lg);
+  background: white;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden
+}
+
+.ob-role-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(59, 95, 212, 0.03), rgba(59, 95, 212, 0.08));
+  opacity: 0;
+  transition: opacity 0.25s ease
+}
+
+.ob-role-card:hover {
+  border-color: rgba(59, 95, 212, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59, 95, 212, 0.1)
+}
+
+.ob-role-card:hover::before {
+  opacity: 1
+}
+
+.ob-role-card.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 95, 212, 0.15), 0 8px 24px rgba(59, 95, 212, 0.15);
+  transform: translateY(-2px)
+}
+
+.ob-role-card.selected::before {
+  opacity: 1
+}
+
+.ob-role-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-3);
+  position: relative;
+  z-index: 1
+}
+
+.ob-role-icon.tenant {
+  background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+  color: var(--color-primary)
+}
+
+.ob-role-icon.landlord {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #059669
+}
+
+.ob-role-label {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-gray-800);
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 1
+}
+
+.ob-role-desc {
+  font-size: 12px;
+  color: var(--color-gray-400);
+  margin-bottom: var(--space-3);
+  line-height: 1.4;
+  position: relative;
+  z-index: 1
+}
+
+.ob-role-features {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-gray-500);
+  position: relative;
+  z-index: 1
+}
+
+/* Next Button with Arrow */
+.ob-next-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2)
+}
+
+/* Skip Button */
+.ob-skip-btn {
+  display: block;
+  width: 100%;
+  padding: var(--space-3);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-gray-400);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  transition: color var(--transition-fast);
+  font-family: inherit;
+  margin-top: var(--space-2)
+}
+
+.ob-skip-btn:hover {
+  color: var(--color-gray-600)
+}
+
+/* Actions area */
+.ob-actions {
+  margin-top: var(--space-5)
+}
+
+/* Verification Upload */
+.ob-verify-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) var(--space-6);
+  border: 2px dashed var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  background: var(--color-gray-50);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: center
+}
+
+.ob-verify-upload:hover {
+  border-color: var(--color-primary);
+  background: rgba(59, 95, 212, 0.03)
+}
+
+.ob-verify-upload.dragover {
+  border-color: var(--color-primary);
+  background: rgba(59, 95, 212, 0.06);
+  transform: scale(1.01)
+}
+
+.ob-verify-icon {
+  color: var(--color-gray-300);
+  margin-bottom: var(--space-3)
+}
+
+.ob-verify-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px
+}
+
+.ob-verify-text strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-gray-700)
+}
+
+.ob-verify-text span {
+  font-size: 12px;
+  color: var(--color-gray-400)
+}
+
+/* Verification Benefits */
+.ob-verify-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: rgba(16, 185, 129, 0.04);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(16, 185, 129, 0.1)
+}
+
+.ob-verify-benefit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-gray-600)
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .ob-role-cards {
+    grid-template-columns: 1fr;
+    gap: var(--space-3)
+  }
+
+  .ob-role-card {
+    padding: var(--space-4) var(--space-3)
+  }
+
+  .ob-role-icon {
+    width: 52px;
+    height: 52px
+  }
+
+  .ob-step-title {
+    font-size: 1.15rem
+  }
+
+  .ob-verify-upload {
+    padding: var(--space-6) var(--space-4)
+  }
+}

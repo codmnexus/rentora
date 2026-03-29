@@ -1,4 +1,4 @@
-import { createUser, loginUser, resetPassword, resendVerificationEmail } from '../utils/store.js';
+import { createUser, loginUser, resetPassword, resendVerificationEmail, updateUser } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
 import {
@@ -69,100 +69,31 @@ export function createLoginPage() {
           </div>
         </div>
 
-        <!-- Signup form (hidden) -->
+        <!-- Onboarding Signup (hidden) -->
         <div id="signup-form" style="display:none">
-          <div class="form-group">
-            <label class="form-label">Full Name</label>
-            <input type="text" class="form-input" id="signup-name" placeholder="John Doe" autocomplete="name" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Email</label>
-            <input type="email" class="form-input" id="signup-email" placeholder="your@email.com" autocomplete="email" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Phone Number</label>
-            <input type="tel" class="form-input" id="signup-phone" placeholder="08012345678" autocomplete="tel" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Password</label>
-            <input type="password" class="form-input" id="signup-password" placeholder="Create a strong password" autocomplete="new-password" />
-            <div class="password-strength" id="password-strength" style="display:none">
-              <div class="password-strength-bar"><div class="password-strength-fill" id="strength-fill"></div></div>
-              <span class="password-strength-label" id="strength-label"></span>
+          <div class="onboarding-container">
+            <!-- Progress Bar -->
+            <div class="onboarding-progress">
+              <div class="onboarding-progress-bar" id="ob-progress-bar"></div>
+              <div class="onboarding-steps-indicator">
+                <div class="onboarding-step-dot active" data-step="1"><span>1</span></div>
+                <div class="onboarding-step-dot" data-step="2"><span>2</span></div>
+                <div class="onboarding-step-dot" data-step="3"><span>3</span></div>
+                <div class="onboarding-step-dot" data-step="4"><span>4</span></div>
+              </div>
             </div>
-            <ul class="password-rules" id="password-rules" style="display:none"></ul>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Confirm Password</label>
-            <input type="password" class="form-input" id="signup-confirm-password" placeholder="Re-enter password" autocomplete="new-password" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">I am a</label>
-            <select class="form-select" id="signup-role">
-              <option value="tenant">Student / Tenant</option>
-              <option value="landlord">Landlord</option>
-            </select>
-          </div>
 
-          <!-- Enhanced Student Profile Fields -->
-          <div id="student-profile-fields">
-            <div class="profile-fields-header" style="margin:8px 0 4px;font-size:13px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.5px">Student Profile (optional)</div>
-            <div class="form-group">
-              <label class="form-label">Department</label>
-              <input type="text" class="form-input" id="signup-department" placeholder="e.g. Computer Science" />
-            </div>
-            <div class="form-row" style="margin-bottom:0">
-              <div class="form-group">
-                <label class="form-label">Budget Range (₦/yr)</label>
-                <select class="form-select" id="signup-budget">
-                  <option value="">Select range</option>
-                  <option value="0-80000">Under ₦80,000</option>
-                  <option value="80000-150000">₦80,000 – ₦150,000</option>
-                  <option value="150000-250000">₦150,000 – ₦250,000</option>
-                  <option value="250000+">₦250,000+</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Preferred Area</label>
-                <select class="form-select" id="signup-area">
-                  <option value="">Any area</option>
-                  <option value="FUTA South Gate">FUTA South Gate</option>
-                  <option value="FUTA North Gate">FUTA North Gate</option>
-                  <option value="Roadblock">Roadblock</option>
-                  <option value="Ijapo Estate">Ijapo Estate</option>
-                  <option value="Oba Ile">Oba Ile</option>
-                  <option value="Aule">Aule</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Roommate Gender Preference</label>
-              <select class="form-select" id="signup-gender-pref">
-                <option value="">No preference</option>
-                <option value="male">Male only</option>
-                <option value="female">Female only</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Student ID (Verification)</label>
-              <div class="id-upload-area" id="id-upload-area">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;margin-bottom:4px"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 20l-4.5-4.5L13 19l-3-3-5 5"/></svg>
-                <span style="font-size:13px;font-weight:600">Upload Student ID</span>
-                <span style="font-size:11px;color:#94A3B8">Click to add your student ID card photo</span>
-                <input type="file" id="signup-id-file" accept="image/*" style="display:none" />
-              </div>
-              <div id="id-preview" style="margin-top:6px"></div>
-            </div>
+            <!-- Step Content Area -->
+            <div class="onboarding-viewport" id="ob-viewport"></div>
           </div>
-
-          <div class="form-error" id="signup-error" style="display:none"></div>
-          <button class="auth-submit" id="signup-btn">Create Account</button>
         </div>
       </div>
     </div>
   `;
 
-  // Tab switching
+  // ===========================
+  // SHARED UI REFERENCES
+  // ===========================
   const tabs = page.querySelectorAll('.auth-tab');
   const loginForm = page.querySelector('#login-form');
   const signupForm = page.querySelector('#signup-form');
@@ -179,67 +110,491 @@ export function createLoginPage() {
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       if (tab.dataset.tab === 'login') showForm('login-form');
-      else showForm('signup-form');
+      else {
+        showForm('signup-form');
+        if (obStep === 0) { obStep = 1; renderStep(); }
+      }
     });
   });
 
-  // Toggle student profile fields based on role
-  const roleSelect = page.querySelector('#signup-role');
-  const studentFields = page.querySelector('#student-profile-fields');
-  roleSelect.addEventListener('change', () => {
-    studentFields.style.display = roleSelect.value === 'tenant' ? '' : 'none';
-  });
+  // ===========================
+  // ONBOARDING STATE
+  // ===========================
+  let obStep = 0;
+  const obData = { role: '', name: '', email: '', phone: '', password: '', confirmPassword: '',
+    department: '', budget: '', preferredArea: '', genderPreference: '',
+    propertyType: '', propertyCount: '', createdUserId: null };
 
-  // Student ID upload
-  const idUploadArea = page.querySelector('#id-upload-area');
-  const idFileInput = page.querySelector('#signup-id-file');
-  const idPreview = page.querySelector('#id-preview');
-  idUploadArea.addEventListener('click', () => idFileInput.click());
-  idFileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      idPreview.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(16,185,129,0.08);border-radius:8px;font-size:12px;color:#059669;font-weight:600">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><circle cx="10" cy="10" r="8"/><path d="M7 10l2.5 2.5L13 8"/></svg>
-        ID uploaded — ${sanitizeInput(file.name)}
-      </div>`;
-    };
-    reader.readAsDataURL(file);
-  });
+  const viewport = page.querySelector('#ob-viewport');
+  const progressBar = page.querySelector('#ob-progress-bar');
+  const dots = page.querySelectorAll('.onboarding-step-dot');
 
-  // ---- Password Strength Meter ----
-  const passwordInput = page.querySelector('#signup-password');
-  const strengthBar = page.querySelector('#password-strength');
-  const strengthFill = page.querySelector('#strength-fill');
-  const strengthLabel = page.querySelector('#strength-label');
-  const rulesEl = page.querySelector('#password-rules');
+  function updateProgress() {
+    const pct = ((obStep - 1) / 3) * 100;
+    progressBar.style.width = `${pct}%`;
+    dots.forEach(d => {
+      const s = parseInt(d.dataset.step);
+      d.classList.toggle('active', s === obStep);
+      d.classList.toggle('done', s < obStep);
+    });
+  }
 
-  passwordInput.addEventListener('input', () => {
-    const val = passwordInput.value;
-    if (!val) { strengthBar.style.display = 'none'; rulesEl.style.display = 'none'; return; }
-    strengthBar.style.display = '';
-    rulesEl.style.display = '';
+  // ===========================
+  // STEP RENDERERS
+  // ===========================
+  function renderStep(direction = 'forward') {
+    updateProgress();
+    viewport.className = 'onboarding-viewport';
+    void viewport.offsetWidth; // force reflow
+    viewport.classList.add(direction === 'forward' ? 'slide-in-right' : 'slide-in-left');
 
-    const { score, maxScore, results } = validatePassword(val);
-    const { label, className } = getPasswordStrength(score, maxScore);
+    if (obStep === 1) renderStep1();
+    else if (obStep === 2) renderStep2();
+    else if (obStep === 3) renderStep3();
+    else if (obStep === 4) renderStep4();
+  }
 
-    strengthFill.style.width = `${(score / maxScore) * 100}%`;
-    strengthFill.className = `password-strength-fill ${className}`;
-    strengthLabel.textContent = label;
-    strengthLabel.className = `password-strength-label ${className}`;
+  // ---- STEP 1: Role Selection ----
+  function renderStep1() {
+    viewport.innerHTML = `
+      <div class="ob-step-content">
+        <div class="ob-step-header">
+          <h3 class="ob-step-title">How will you use Rentora?</h3>
+          <p class="ob-step-subtitle">Select your role to get a personalized experience</p>
+        </div>
+        <div class="ob-role-cards">
+          <button class="ob-role-card ${obData.role === 'tenant' ? 'selected' : ''}" data-role="tenant">
+            <div class="ob-role-icon tenant">
+              <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40">
+                <path d="M8 36V20L20 8l12 12v16"/>
+                <rect x="15" y="24" width="10" height="12" rx="1"/>
+                <path d="M18 30h4"/>
+                <circle cx="20" cy="15" r="2"/>
+              </svg>
+            </div>
+            <div class="ob-role-label">Student / Tenant</div>
+            <div class="ob-role-desc">I'm looking for accommodation near my school</div>
+            <div class="ob-role-features">
+              <span>🏠 Browse listings</span>
+              <span>💬 Chat with landlords</span>
+              <span>📋 Book inspections</span>
+            </div>
+          </button>
+          <button class="ob-role-card ${obData.role === 'landlord' ? 'selected' : ''}" data-role="landlord">
+            <div class="ob-role-icon landlord">
+              <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40">
+                <rect x="4" y="14" width="32" height="22" rx="2"/>
+                <path d="M4 20h32"/>
+                <path d="M12 14V8h16v6"/>
+                <circle cx="20" cy="27" r="3"/>
+                <path d="M20 30v4"/>
+              </svg>
+            </div>
+            <div class="ob-role-label">Landlord</div>
+            <div class="ob-role-desc">I have properties to list for students</div>
+            <div class="ob-role-features">
+              <span>📝 List properties</span>
+              <span>💰 Receive payments</span>
+              <span>📊 Track earnings</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    `;
 
-    rulesEl.innerHTML = results.map(r =>
-      `<li class="${r.passed ? 'rule-pass' : 'rule-fail'}">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px">
-          ${r.passed ? '<path d="M4 8l3 3 5-5"/>' : '<path d="M4 4l8 8M12 4l-8 8"/>'}
-        </svg>
-        ${r.label}
-      </li>`
-    ).join('');
-  });
+    viewport.querySelectorAll('.ob-role-card').forEach(card => {
+      card.addEventListener('click', () => {
+        obData.role = card.dataset.role;
+        viewport.querySelectorAll('.ob-role-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        setTimeout(() => { obStep = 2; renderStep('forward'); }, 300);
+      });
+    });
+  }
 
-  // ---- Forgot Password ----
+  // ---- STEP 2: Core Credentials ----
+  function renderStep2() {
+    viewport.innerHTML = `
+      <div class="ob-step-content">
+        <div class="ob-step-header">
+          <div class="ob-step-nav-row">
+            <button class="ob-back-btn" id="ob-back-2">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 10H5M5 10l5-5M5 10l5 5"/></svg>
+            </button>
+            <span class="ob-step-tag">Step 2 of 4</span>
+          </div>
+          <h3 class="ob-step-title">Create your account</h3>
+          <p class="ob-step-subtitle">Just the essentials — takes 30 seconds</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-input" id="ob-name" placeholder="John Doe" autocomplete="name" value="${obData.name}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="ob-email" placeholder="your@email.com" autocomplete="email" value="${obData.email}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" class="form-input" id="ob-phone" placeholder="08012345678" autocomplete="tel" value="${obData.phone}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="ob-password" placeholder="Create a strong password" autocomplete="new-password" />
+          <div class="password-strength" id="ob-strength" style="display:none">
+            <div class="password-strength-bar"><div class="password-strength-fill" id="ob-strength-fill"></div></div>
+            <span class="password-strength-label" id="ob-strength-label"></span>
+          </div>
+          <ul class="password-rules" id="ob-password-rules" style="display:none"></ul>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input type="password" class="form-input" id="ob-confirm-password" placeholder="Re-enter password" autocomplete="new-password" />
+        </div>
+
+        <div class="form-error" id="ob-error-2" style="display:none"></div>
+        <button class="auth-submit ob-next-btn" id="ob-create-btn">
+          Create Account
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </button>
+      </div>
+    `;
+
+    // Back button
+    viewport.querySelector('#ob-back-2').addEventListener('click', () => { 
+      saveStep2Fields();
+      obStep = 1; renderStep('backward'); 
+    });
+
+    // Password strength meter
+    const pwInput = viewport.querySelector('#ob-password');
+    const strengthBar = viewport.querySelector('#ob-strength');
+    const strengthFill = viewport.querySelector('#ob-strength-fill');
+    const strengthLabel = viewport.querySelector('#ob-strength-label');
+    const rulesEl = viewport.querySelector('#ob-password-rules');
+
+    pwInput.addEventListener('input', () => {
+      const val = pwInput.value;
+      if (!val) { strengthBar.style.display = 'none'; rulesEl.style.display = 'none'; return; }
+      strengthBar.style.display = '';
+      rulesEl.style.display = '';
+
+      const { score, maxScore, results } = validatePassword(val);
+      const { label, className } = getPasswordStrength(score, maxScore);
+
+      strengthFill.style.width = `${(score / maxScore) * 100}%`;
+      strengthFill.className = `password-strength-fill ${className}`;
+      strengthLabel.textContent = label;
+      strengthLabel.className = `password-strength-label ${className}`;
+
+      rulesEl.innerHTML = results.map(r =>
+        `<li class="${r.passed ? 'rule-pass' : 'rule-fail'}">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px">
+            ${r.passed ? '<path d="M4 8l3 3 5-5"/>' : '<path d="M4 4l8 8M12 4l-8 8"/>'}
+          </svg>
+          ${r.label}
+        </li>`
+      ).join('');
+    });
+
+    function saveStep2Fields() {
+      obData.name = viewport.querySelector('#ob-name')?.value?.trim() || obData.name;
+      obData.email = viewport.querySelector('#ob-email')?.value?.trim() || obData.email;
+      obData.phone = viewport.querySelector('#ob-phone')?.value?.trim() || obData.phone;
+      obData.password = viewport.querySelector('#ob-password')?.value || obData.password;
+      obData.confirmPassword = viewport.querySelector('#ob-confirm-password')?.value || obData.confirmPassword;
+    }
+
+    // Create Account
+    viewport.querySelector('#ob-create-btn').addEventListener('click', async () => {
+      saveStep2Fields();
+      const errEl = viewport.querySelector('#ob-error-2');
+      errEl.style.display = 'none';
+
+      if (!obData.name || !obData.email || !obData.phone || !obData.password) {
+        errEl.textContent = 'Please fill in all fields'; errEl.style.display = ''; return;
+      }
+      if (!isValidEmail(obData.email)) {
+        errEl.textContent = 'Please enter a valid email address'; errEl.style.display = ''; return;
+      }
+      if (!isValidPhone(obData.phone)) {
+        errEl.textContent = 'Enter a valid Nigerian phone number (e.g. 08012345678)'; errEl.style.display = ''; return;
+      }
+      const { valid } = validatePassword(obData.password);
+      if (!valid) {
+        errEl.textContent = 'Password doesn\'t meet all requirements'; errEl.style.display = ''; return;
+      }
+      if (obData.password !== obData.confirmPassword) {
+        errEl.textContent = 'Passwords do not match'; errEl.style.display = ''; return;
+      }
+
+      const btn = viewport.querySelector('#ob-create-btn');
+      btn.textContent = 'Creating account...';
+      btn.disabled = true;
+
+      const userData = {
+        name: sanitizeInput(obData.name),
+        email: obData.email,
+        phone: sanitizeInput(obData.phone),
+        password: obData.password,
+        role: obData.role
+      };
+
+      const result = await createUser(userData);
+      if (result.error) {
+        errEl.textContent = result.error;
+        errEl.style.display = '';
+        btn.innerHTML = 'Create Account <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 8h10M9 4l4 4-4 4"/></svg>';
+        btn.disabled = false;
+        return;
+      }
+
+      // Store for later profile updates
+      if (result.user?.id) obData.createdUserId = result.user.id;
+
+      // Handle email verification flow
+      if (result.emailVerificationSent) {
+        // Still proceed to step 3 — they can verify email later
+        showToast('Account created! Check your email to verify.', 'success');
+      } else {
+        // localStorage/demo mode — auto login
+        await loginUser(obData.email, obData.password);
+        showToast(`Account created! 🎉`, 'success');
+      }
+
+      obStep = 3;
+      renderStep('forward');
+    });
+  }
+
+  // ---- STEP 3: Personalization ----
+  function renderStep3() {
+    const isTenant = obData.role === 'tenant';
+
+    viewport.innerHTML = `
+      <div class="ob-step-content">
+        <div class="ob-step-header">
+          <div class="ob-step-nav-row">
+            <div></div>
+            <span class="ob-step-tag">Step 3 of 4 · Optional</span>
+          </div>
+          <h3 class="ob-step-title">${isTenant ? 'Tell us your preferences' : 'About your properties'}</h3>
+          <p class="ob-step-subtitle">${isTenant ? 'Help us find the perfect accommodation for you' : 'Help tenants discover your listings'}</p>
+        </div>
+
+        ${isTenant ? `
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <input type="text" class="form-input" id="ob-department" placeholder="e.g. Computer Science" value="${obData.department}" />
+          </div>
+          <div class="form-row" style="margin-bottom:0">
+            <div class="form-group">
+              <label class="form-label">Budget Range (₦/yr)</label>
+              <select class="form-select" id="ob-budget">
+                <option value="">Select range</option>
+                <option value="0-80000" ${obData.budget === '0-80000' ? 'selected' : ''}>Under ₦80,000</option>
+                <option value="80000-150000" ${obData.budget === '80000-150000' ? 'selected' : ''}>₦80,000 – ₦150,000</option>
+                <option value="150000-250000" ${obData.budget === '150000-250000' ? 'selected' : ''}>₦150,000 – ₦250,000</option>
+                <option value="250000+" ${obData.budget === '250000+' ? 'selected' : ''}>₦250,000+</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Preferred Area</label>
+              <select class="form-select" id="ob-area">
+                <option value="">Any area</option>
+                <option value="FUTA South Gate" ${obData.preferredArea === 'FUTA South Gate' ? 'selected' : ''}>FUTA South Gate</option>
+                <option value="FUTA North Gate" ${obData.preferredArea === 'FUTA North Gate' ? 'selected' : ''}>FUTA North Gate</option>
+                <option value="Roadblock" ${obData.preferredArea === 'Roadblock' ? 'selected' : ''}>Roadblock</option>
+                <option value="Ijapo Estate" ${obData.preferredArea === 'Ijapo Estate' ? 'selected' : ''}>Ijapo Estate</option>
+                <option value="Oba Ile" ${obData.preferredArea === 'Oba Ile' ? 'selected' : ''}>Oba Ile</option>
+                <option value="Aule" ${obData.preferredArea === 'Aule' ? 'selected' : ''}>Aule</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Roommate Gender Preference</label>
+            <select class="form-select" id="ob-gender-pref">
+              <option value="">No preference</option>
+              <option value="male" ${obData.genderPreference === 'male' ? 'selected' : ''}>Male only</option>
+              <option value="female" ${obData.genderPreference === 'female' ? 'selected' : ''}>Female only</option>
+            </select>
+          </div>
+        ` : `
+          <div class="form-group">
+            <label class="form-label">Type of Property</label>
+            <select class="form-select" id="ob-property-type">
+              <option value="">Select type</option>
+              <option value="self-contain" ${obData.propertyType === 'self-contain' ? 'selected' : ''}>Self-Contain</option>
+              <option value="single-room" ${obData.propertyType === 'single-room' ? 'selected' : ''}>Single Room</option>
+              <option value="shared" ${obData.propertyType === 'shared' ? 'selected' : ''}>Shared Apartment</option>
+              <option value="flat" ${obData.propertyType === 'flat' ? 'selected' : ''}>Flat / Apartment</option>
+              <option value="hostel" ${obData.propertyType === 'hostel' ? 'selected' : ''}>Hostel</option>
+              <option value="mixed" ${obData.propertyType === 'mixed' ? 'selected' : ''}>Mixed / Multiple Types</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">How many properties do you manage?</label>
+            <select class="form-select" id="ob-property-count">
+              <option value="">Select</option>
+              <option value="1" ${obData.propertyCount === '1' ? 'selected' : ''}>1</option>
+              <option value="2-5" ${obData.propertyCount === '2-5' ? 'selected' : ''}>2 – 5</option>
+              <option value="6-10" ${obData.propertyCount === '6-10' ? 'selected' : ''}>6 – 10</option>
+              <option value="10+" ${obData.propertyCount === '10+' ? 'selected' : ''}>10+</option>
+            </select>
+          </div>
+        `}
+
+        <div class="ob-actions">
+          <button class="auth-submit ob-next-btn" id="ob-next-3">
+            Continue
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+          </button>
+          <button class="ob-skip-btn" id="ob-skip-3">Skip for now</button>
+        </div>
+      </div>
+    `;
+
+    function saveStep3() {
+      if (isTenant) {
+        obData.department = viewport.querySelector('#ob-department')?.value?.trim() || '';
+        obData.budget = viewport.querySelector('#ob-budget')?.value || '';
+        obData.preferredArea = viewport.querySelector('#ob-area')?.value || '';
+        obData.genderPreference = viewport.querySelector('#ob-gender-pref')?.value || '';
+      } else {
+        obData.propertyType = viewport.querySelector('#ob-property-type')?.value || '';
+        obData.propertyCount = viewport.querySelector('#ob-property-count')?.value || '';
+      }
+    }
+
+    viewport.querySelector('#ob-next-3').addEventListener('click', async () => {
+      saveStep3();
+      // Save profile updates
+      if (obData.createdUserId) {
+        const updates = isTenant
+          ? { department: obData.department, budget: obData.budget, preferredArea: obData.preferredArea, genderPreference: obData.genderPreference }
+          : { propertyType: obData.propertyType, propertyCount: obData.propertyCount };
+        try { await updateUser(obData.createdUserId, updates); } catch(e) { /* non-fatal */ }
+      }
+      obStep = 4;
+      renderStep('forward');
+    });
+
+    viewport.querySelector('#ob-skip-3').addEventListener('click', () => {
+      obStep = 4;
+      renderStep('forward');
+    });
+  }
+
+  // ---- STEP 4: Verification ----
+  function renderStep4() {
+    const isTenant = obData.role === 'tenant';
+
+    viewport.innerHTML = `
+      <div class="ob-step-content">
+        <div class="ob-step-header">
+          <div class="ob-step-nav-row">
+            <button class="ob-back-btn" id="ob-back-4">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 10H5M5 10l5-5M5 10l5 5"/></svg>
+            </button>
+            <span class="ob-step-tag">Step 4 of 4 · Optional</span>
+          </div>
+          <h3 class="ob-step-title">${isTenant ? 'Verify your student status' : 'Verify your identity'}</h3>
+          <p class="ob-step-subtitle">${isTenant ? 'Verified students get a trust badge on their profile' : 'Build trust with tenants by verifying your identity'}</p>
+        </div>
+
+        <div class="ob-verify-upload" id="ob-verify-dropzone">
+          <div class="ob-verify-icon">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+              <rect x="6" y="10" width="36" height="28" rx="3"/>
+              <circle cx="18" cy="24" r="5"/>
+              <path d="M28 18h8M28 24h8M28 30h6"/>
+              <path d="M42 38l-8-8"/>
+            </svg>
+          </div>
+          <div class="ob-verify-text">
+            <strong>${isTenant ? 'Upload Student ID Card' : 'Upload Valid ID / CAC Document'}</strong>
+            <span>Click or drag to upload (JPG, PNG, PDF)</span>
+          </div>
+          <input type="file" id="ob-verify-file" accept="image/*,.pdf" style="display:none" />
+        </div>
+        <div id="ob-verify-preview" style="margin-top:8px"></div>
+
+        <div class="ob-verify-benefits">
+          <div class="ob-verify-benefit">
+            <svg viewBox="0 0 20 20" fill="none" stroke="var(--color-success)" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            <span>Trust badge on your profile</span>
+          </div>
+          <div class="ob-verify-benefit">
+            <svg viewBox="0 0 20 20" fill="none" stroke="var(--color-success)" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            <span>Higher response rates from ${isTenant ? 'landlords' : 'tenants'}</span>
+          </div>
+          <div class="ob-verify-benefit">
+            <svg viewBox="0 0 20 20" fill="none" stroke="var(--color-success)" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            <span>Priority in search results</span>
+          </div>
+        </div>
+
+        <div class="ob-actions">
+          <button class="auth-submit ob-next-btn" id="ob-finish-btn">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            Complete Setup
+          </button>
+          <button class="ob-skip-btn" id="ob-skip-4">Skip for now</button>
+        </div>
+      </div>
+    `;
+
+    // File upload
+    const dropzone = viewport.querySelector('#ob-verify-dropzone');
+    const fileInput = viewport.querySelector('#ob-verify-file');
+    const preview = viewport.querySelector('#ob-verify-preview');
+    let uploadedFile = null;
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+      uploadedFile = file;
+      preview.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(16,185,129,0.08);border-radius:10px;font-size:13px;color:#059669;font-weight:600">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+          ${sanitizeInput(file.name)} uploaded
+        </div>
+      `;
+    }
+
+    // Back
+    viewport.querySelector('#ob-back-4').addEventListener('click', () => {
+      obStep = 3; renderStep('backward');
+    });
+
+    // Finish
+    viewport.querySelector('#ob-finish-btn').addEventListener('click', () => finishOnboarding());
+    viewport.querySelector('#ob-skip-4').addEventListener('click', () => finishOnboarding());
+  }
+
+  function finishOnboarding() {
+    showToast(`Welcome to Rentora, ${obData.name.split(' ')[0]}! 🎉`, 'success');
+    if (obData.role === 'landlord') navigate('/landlord');
+    else navigate('/');
+    location.reload();
+  }
+
+  // ===========================
+  // LOGIN (unchanged)
+  // ===========================
   page.querySelector('#forgot-password-link').addEventListener('click', (e) => {
     e.preventDefault();
     showForm('forgot-form');
@@ -278,7 +633,6 @@ export function createLoginPage() {
     }
   });
 
-  // ---- Resend Verification ----
   page.querySelector('#resend-verify-btn')?.addEventListener('click', async () => {
     const result = await resendVerificationEmail();
     if (result.success) {
@@ -288,7 +642,6 @@ export function createLoginPage() {
     }
   });
 
-  // ---- Login with Rate Limiting ----
   page.querySelector('#login-btn').addEventListener('click', async () => {
     const email = page.querySelector('#login-email').value.trim();
     const password = page.querySelector('#login-password').value;
@@ -303,7 +656,6 @@ export function createLoginPage() {
       return;
     }
 
-    // Check rate limit before attempting login
     const lockout = checkLoginLockout();
     if (lockout.locked) {
       const mins = Math.ceil(lockout.remainingMs / 60000);
@@ -325,14 +677,12 @@ export function createLoginPage() {
       return;
     }
 
-    // Check if email verification is pending
     if (result.emailNotVerified) {
       page.querySelector('#verify-message').textContent = result.message || 'Please verify your email address.';
       showForm('verify-notice');
       return;
     }
 
-    // Successful login
     clearLoginAttempts();
     showToast(`Welcome back, ${result.user.name}! 🎉`);
     const role = result.user.role;
@@ -340,85 +690,6 @@ export function createLoginPage() {
     else if (role === 'landlord') navigate('/landlord');
     else navigate('/');
     location.reload();
-  });
-
-  // ---- Signup with Validation ----
-  page.querySelector('#signup-btn').addEventListener('click', async () => {
-    const name = page.querySelector('#signup-name').value.trim();
-    const email = page.querySelector('#signup-email').value.trim();
-    const phone = page.querySelector('#signup-phone').value.trim();
-    const password = page.querySelector('#signup-password').value;
-    const confirmPassword = page.querySelector('#signup-confirm-password').value;
-    const role = page.querySelector('#signup-role').value;
-    const errEl = page.querySelector('#signup-error');
-    errEl.style.display = 'none';
-
-    // Required field validation
-    if (!name || !email || !phone || !password) {
-      errEl.textContent = 'Please fill in all required fields';
-      errEl.style.display = '';
-      return;
-    }
-
-    // Email validation
-    if (!isValidEmail(email)) {
-      errEl.textContent = 'Please enter a valid email address';
-      errEl.style.display = '';
-      return;
-    }
-
-    // Phone validation
-    if (!isValidPhone(phone)) {
-      errEl.textContent = 'Please enter a valid Nigerian phone number (e.g. 08012345678)';
-      errEl.style.display = '';
-      return;
-    }
-
-    // Password strength validation
-    const { valid } = validatePassword(password);
-    if (!valid) {
-      errEl.textContent = 'Password does not meet all requirements. Check the checklist above.';
-      errEl.style.display = '';
-      return;
-    }
-
-    // Confirm password match
-    if (password !== confirmPassword) {
-      errEl.textContent = 'Passwords do not match';
-      errEl.style.display = '';
-      return;
-    }
-
-    const userData = { name: sanitizeInput(name), email, phone: sanitizeInput(phone), password, role };
-    // Add student profile fields if tenant
-    if (role === 'tenant') {
-      userData.department = sanitizeInput(page.querySelector('#signup-department')?.value?.trim() || '');
-      userData.budget = page.querySelector('#signup-budget')?.value || '';
-      userData.preferredArea = page.querySelector('#signup-area')?.value || '';
-      userData.genderPreference = page.querySelector('#signup-gender-pref')?.value || '';
-    }
-
-    const result = await createUser(userData);
-    if (result.error) {
-      errEl.textContent = result.error;
-      errEl.style.display = '';
-      return;
-    }
-
-    // Show verification notice instead of auto-logging in
-    if (result.emailVerificationSent) {
-      page.querySelector('#verify-message').textContent =
-        `We've sent a verification email to ${email}. Please check your inbox and click the link to activate your account.`;
-      showForm('verify-notice');
-      showToast(`Account created! Please verify your email.`, 'success');
-    } else {
-      // Fallback: auto login (for demo/localStorage mode)
-      await loginUser(email, password);
-      showToast(`Account created! Welcome, ${name}! 🎉`);
-      if (role === 'landlord') navigate('/landlord');
-      else navigate('/');
-      location.reload();
-    }
   });
 
   return page;
