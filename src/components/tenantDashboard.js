@@ -1,4 +1,4 @@
-import { getCurrentUser, getSavedListings, getPropertyById, getConversations, getUserById, getTakeoversByStudent, getInspectionsByTenant, updateUser } from '../utils/store.js';
+import { getCurrentUser, getSavedListings, getPropertyById, getConversations, getUserById, getTakeoversByStudent, getInspectionsByTenant, updateUser, getWallet, getUserTransactions } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { createPropertyCard } from './propertyCard.js';
 import { createTakeoverCard } from './takeoverCard.js';
@@ -13,6 +13,7 @@ export async function createTenantDashboard() {
   const convos = await getConversations(user.id);
   const myTakeovers = await getTakeoversByStudent(user.id);
   const myInspections = await getInspectionsByTenant(user.id);
+  const wallet = await getWallet();
 
   const page = document.createElement('div');
   page.className = 'dashboard';
@@ -44,10 +45,16 @@ export async function createTenantDashboard() {
         <div class="stat-card-value">${myTakeovers.length}</div>
         <div class="stat-card-label">Takeover Posts</div>
       </div>
+      <div class="stat-card">
+        <div class="stat-card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 100 4 2 2 0 000-4z"/></svg></div>
+        <div class="stat-card-value" id="stat-wallet-balance">₦${(wallet.balance || 0).toLocaleString()}</div>
+        <div class="stat-card-label">Wallet Balance</div>
+      </div>
     </div>
 
     <div class="dashboard-tabs">
       <div class="dashboard-tab active" data-tab="saved">Saved Homes</div>
+      <div class="dashboard-tab" data-tab="wallet">Wallet</div>
       <div class="dashboard-tab" data-tab="inspections">Inspections</div>
       <div class="dashboard-tab" data-tab="takeovers">My Takeovers</div>
       <div class="dashboard-tab" data-tab="messages">Messages</div>
@@ -223,11 +230,74 @@ export async function createTenantDashboard() {
     });
   }
 
+  async function renderWallet() {
+    tabContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--color-gray-400)">Loading wallet...</div>';
+    const freshWallet = await getWallet();
+    const transactions = await getUserTransactions(user.id);
+
+    tabContent.innerHTML = `
+      <div class="wallet-dashboard">
+        <div class="wallet-balance-card">
+          <div class="wallet-balance-header">
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--color-gray-400);text-transform:uppercase;letter-spacing:0.5px">Available Balance</div>
+              <div style="font-size:32px;font-weight:800;color:var(--color-primary);margin-top:4px" id="dash-wallet-balance">₦${(freshWallet.balance || 0).toLocaleString()}</div>
+            </div>
+            <button class="hero-search-btn" id="dash-fund-btn" style="padding:10px 20px;font-size:14px">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"><path d="M8 3v10M3 8h10"/></svg>
+              Fund Wallet
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top:24px">
+          <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">Transaction History</h3>
+          ${transactions.length === 0 ? '<div class="no-results"><h3>No transactions yet</h3><p>Fund your wallet to get started</p></div>' : `
+            <div class="transaction-list">
+              ${transactions.map(t => {
+                const isCredit = ['deposit', 'escrow_release', 'refund'].includes(t.type);
+                const sign = isCredit ? '+' : '-';
+                const colorClass = isCredit ? 'credit' : 'debit';
+                const amount = Math.abs(t.amount);
+                const date = t.createdAt?.toDate ? t.createdAt.toDate().toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : t.createdAt?.seconds ? new Date(t.createdAt.seconds * 1000).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
+                const typeLabels = { deposit: 'Deposit', payment: 'Payment', escrow_hold: 'Escrow Hold', escrow_release: 'Escrow Release', refund: 'Refund', withdraw: 'Withdrawal', fee: 'Fee' };
+                return `
+                  <div class="transaction-item">
+                    <div class="transaction-icon ${colorClass}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px">
+                        ${isCredit ? '<path d="M12 19V5M5 12l7-7 7 7"/>' : '<path d="M12 5v14M19 12l-7 7-7-7"/>'}
+                      </svg>
+                    </div>
+                    <div class="transaction-details">
+                      <div class="transaction-type">${typeLabels[t.type] || t.type}</div>
+                      <div class="transaction-date">${date}</div>
+                    </div>
+                    <div class="transaction-amount ${colorClass}">${sign}₦${amount.toLocaleString()}</div>
+                    <div class="transaction-status">
+                      <span class="status-badge ${t.status}">${t.status}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+
+    // Update the stat card too
+    const statBal = page.querySelector('#stat-wallet-balance');
+    if (statBal) statBal.textContent = `₦${(freshWallet.balance || 0).toLocaleString()}`;
+
+    tabContent.querySelector('#dash-fund-btn')?.addEventListener('click', () => navigate('/payment'));
+  }
+
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       if (tab.dataset.tab === 'saved') renderSaved();
+      else if (tab.dataset.tab === 'wallet') renderWallet();
       else if (tab.dataset.tab === 'inspections') renderInspections();
       else if (tab.dataset.tab === 'takeovers') renderTakeovers();
       else if (tab.dataset.tab === 'profile') renderEditProfile();
