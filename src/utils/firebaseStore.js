@@ -5,7 +5,7 @@
 import { db, auth } from './firebase.js';
 import {
     collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc,
-    query, where, orderBy, limit, serverTimestamp, increment
+    query, where, orderBy, limit, serverTimestamp, increment, onSnapshot
 } from 'firebase/firestore';
 
 
@@ -496,6 +496,120 @@ export async function getChatMessages(userId, otherUserId, propertyId) {
             ((m.senderId === userId && m.receiverId === otherUserId) ||
                 (m.senderId === otherUserId && m.receiverId === userId)))
         .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+}
+// ---- Real-Time Listeners ----
+
+/**
+ * Subscribe to chat messages in real-time between two users about a property.
+ * Returns an unsubscribe() function for cleanup.
+ */
+export function onChatMessages(userId, otherUserId, propertyId, callback) {
+    // Listen to messages sent by current user to other user
+    const q1 = query(
+        collection(db, COL.MESSAGES),
+        where('senderId', '==', userId),
+        where('receiverId', '==', otherUserId),
+        where('propertyId', '==', propertyId)
+    );
+    // Listen to messages sent by other user to current user
+    const q2 = query(
+        collection(db, COL.MESSAGES),
+        where('senderId', '==', otherUserId),
+        where('receiverId', '==', userId),
+        where('propertyId', '==', propertyId)
+    );
+
+    let sentMsgs = [];
+    let recvMsgs = [];
+    let initialized = [false, false];
+
+    function merge() {
+        if (!initialized[0] || !initialized[1]) return;
+        const all = [...sentMsgs, ...recvMsgs]
+            .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        callback(all);
+    }
+
+    const unsub1 = onSnapshot(q1, (snap) => {
+        sentMsgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        initialized[0] = true;
+        merge();
+    }, (err) => console.error('[Rentora] onChatMessages sent error:', err.message));
+
+    const unsub2 = onSnapshot(q2, (snap) => {
+        recvMsgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        initialized[1] = true;
+        merge();
+    }, (err) => console.error('[Rentora] onChatMessages recv error:', err.message));
+
+    return () => { unsub1(); unsub2(); };
+}
+
+/**
+ * Subscribe to notifications for a user in real-time.
+ * Returns an unsubscribe() function.
+ */
+export function onNotifications(userId, callback) {
+    const q = query(
+        collection(db, COL.NOTIFICATIONS),
+        where('userId', '==', userId)
+    );
+    return onSnapshot(q, (snap) => {
+        const notifs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        callback(notifs);
+    }, (err) => console.error('[Rentora] onNotifications error:', err.message));
+}
+
+/**
+ * Subscribe to all conversations for a user in real-time (sidebar updates).
+ * Returns an unsubscribe() function.
+ */
+export function onConversations(userId, callback) {
+    const q1 = query(collection(db, COL.MESSAGES), where('senderId', '==', userId));
+    const q2 = query(collection(db, COL.MESSAGES), where('receiverId', '==', userId));
+
+    let sentMsgs = [];
+    let recvMsgs = [];
+    let initialized = [false, false];
+
+    function buildConvos() {
+        if (!initialized[0] || !initialized[1]) return;
+        const allMsgs = new Map();
+        sentMsgs.forEach(m => allMsgs.set(m.id, m));
+        recvMsgs.forEach(m => allMsgs.set(m.id, m));
+        const msgs = Array.from(allMsgs.values());
+
+        const convos = {};
+        msgs.forEach(m => {
+            const otherId = m.senderId === userId ? m.receiverId : m.senderId;
+            const key = [m.propertyId, otherId].sort().join('-');
+            if (!convos[key]) convos[key] = { otherUserId: otherId, propertyId: m.propertyId, messages: [] };
+            convos[key].messages.push(m);
+        });
+
+        const result = Object.values(convos).map(c => {
+            c.messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            c.lastMessage = c.messages[c.messages.length - 1];
+            return c;
+        }).sort((a, b) => new Date(b.lastMessage.timestamp) - new Date(a.lastMessage.timestamp));
+
+        callback(result);
+    }
+
+    const unsub1 = onSnapshot(q1, (snap) => {
+        sentMsgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        initialized[0] = true;
+        buildConvos();
+    }, (err) => console.error('[Rentora] onConversations sent error:', err.message));
+
+    const unsub2 = onSnapshot(q2, (snap) => {
+        recvMsgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        initialized[1] = true;
+        buildConvos();
+    }, (err) => console.error('[Rentora] onConversations recv error:', err.message));
+
+    return () => { unsub1(); unsub2(); };
 }
 
 // ---- Saved Listings ----

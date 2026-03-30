@@ -1,6 +1,54 @@
-import { getCurrentUser, getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead } from '../utils/store.js';
+import { getCurrentUser, getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead, onNotifications } from '../utils/store.js';
 import { escapeHTML } from '../utils/authSecurity.js';
 
+// ===========================
+// TOAST NOTIFICATION SYSTEM
+// ===========================
+let _toastContainer = null;
+
+function getToastContainer() {
+  if (_toastContainer && document.contains(_toastContainer)) return _toastContainer;
+  _toastContainer = document.createElement('div');
+  _toastContainer.className = 'toast-container';
+  _toastContainer.id = 'toast-container';
+  document.body.appendChild(_toastContainer);
+  return _toastContainer;
+}
+
+export function showToast(message, type = 'general', duration = 5000) {
+  const container = getToastContainer();
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `
+    <div class="toast-icon">${getNotifIcon(type)}</div>
+    <div class="toast-text">${escapeHTML(message)}</div>
+    <button class="toast-close" aria-label="Dismiss">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+    </button>
+  `;
+
+  toast.querySelector('.toast-close').addEventListener('click', () => {
+    toast.classList.add('toast-exit');
+    setTimeout(() => toast.remove(), 300);
+  });
+
+  container.appendChild(toast);
+
+  // Trigger entrance animation
+  requestAnimationFrame(() => toast.classList.add('toast-enter'));
+
+  // Auto-dismiss
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.classList.add('toast-exit');
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, duration);
+}
+
+// ===========================
+// NOTIFICATION BELL (with real-time)
+// ===========================
 export async function createNotificationBell() {
   const user = await getCurrentUser();
   if (!user) return null;
@@ -28,13 +76,17 @@ export async function createNotificationBell() {
   const dropdown = container.querySelector('#notif-dropdown');
   const listEl = container.querySelector('#notif-list');
 
-  async function renderNotifications() {
-    const notifs = (await getNotifications(user.id)).slice(0, 20);
-    if (notifs.length === 0) {
+  // Track previous notification count for toast detection
+  let _prevNotifCount = -1;
+  let _unsubNotifs = null;
+
+  function renderNotifList(notifs) {
+    const sliced = notifs.slice(0, 20);
+    if (sliced.length === 0) {
       listEl.innerHTML = '<div class="notif-empty">No notifications yet</div>';
       return;
     }
-    listEl.innerHTML = notifs.map(n => {
+    listEl.innerHTML = sliced.map(n => {
       const timeAgo = getTimeAgo(n.createdAt);
       const icon = getNotifIcon(n.type);
       return `
@@ -54,31 +106,74 @@ export async function createNotificationBell() {
         await markNotificationRead(item.dataset.id);
         item.classList.remove('unread');
         item.querySelector('.notif-dot')?.remove();
-        await updateBadge();
       });
     });
   }
 
-  async function updateBadge() {
-    const count = await getUnreadCount(user.id);
-    const badge = container.querySelector('.notification-badge');
+  function updateBadge(count) {
+    let badge = container.querySelector('.notification-badge');
     if (count > 0) {
-      if (badge) badge.textContent = count > 9 ? '9+' : count;
-      else {
-        const b = document.createElement('span');
-        b.className = 'notification-badge';
-        b.textContent = count > 9 ? '9+' : count;
-        bell.appendChild(b);
+      if (badge) {
+        badge.textContent = count > 9 ? '9+' : count;
+      } else {
+        badge = document.createElement('span');
+        badge.className = 'notification-badge';
+        badge.textContent = count > 9 ? '9+' : count;
+        bell.appendChild(badge);
       }
+      // Pulse animation on new notifications
+      bell.classList.add('notif-pulse');
+      setTimeout(() => bell.classList.remove('notif-pulse'), 600);
     } else {
       badge?.remove();
     }
   }
 
+  // Subscribe to real-time notifications
+  _unsubNotifs = onNotifications(user.id, (notifs) => {
+    const unreadCount = notifs.filter(n => !n.read).length;
+    updateBadge(unreadCount);
+
+    // Show toast for NEW notifications (not on initial load)
+    if (_prevNotifCount >= 0 && notifs.length > _prevNotifCount) {
+      const newest = notifs[0]; // sorted by createdAt desc
+      if (newest && !newest.read) {
+        showToast(newest.message, newest.type);
+      }
+    }
+    _prevNotifCount = notifs.length;
+
+    // Update dropdown if it's open
+    if (dropdown.classList.contains('active')) {
+      renderNotifList(notifs);
+    }
+
+    // Store latest for when dropdown opens
+    container._latestNotifs = notifs;
+
+    // Update mark-all button visibility
+    const markAllBtn = container.querySelector('#notif-mark-all');
+    if (unreadCount > 0 && !markAllBtn) {
+      const header = container.querySelector('.notif-dropdown-header');
+      const btn = document.createElement('button');
+      btn.className = 'notif-mark-all';
+      btn.id = 'notif-mark-all';
+      btn.textContent = 'Mark all read';
+      btn.addEventListener('click', async () => {
+        await markAllNotificationsRead(user.id);
+      });
+      header.appendChild(btn);
+    } else if (unreadCount === 0 && markAllBtn) {
+      markAllBtn.remove();
+    }
+  });
+
   bell.addEventListener('click', (e) => {
     e.stopPropagation();
     dropdown.classList.toggle('active');
-    if (dropdown.classList.contains('active')) renderNotifications();
+    if (dropdown.classList.contains('active') && container._latestNotifs) {
+      renderNotifList(container._latestNotifs);
+    }
   });
 
   document.addEventListener('click', () => dropdown.classList.remove('active'));
@@ -86,9 +181,16 @@ export async function createNotificationBell() {
 
   container.querySelector('#notif-mark-all')?.addEventListener('click', async () => {
     await markAllNotificationsRead(user.id);
-    await renderNotifications();
-    await updateBadge();
   });
+
+  // Cleanup observer
+  const observer = new MutationObserver(() => {
+    if (!document.contains(container)) {
+      if (_unsubNotifs) _unsubNotifs();
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 
   return container;
 }

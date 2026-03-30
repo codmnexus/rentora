@@ -318,6 +318,24 @@ export async function getChatMessages(userId, otherUserId, propertyId) {
 }
 
 // ============================================
+// REAL-TIME LISTENERS
+// ============================================
+export function onChatMessages(userId, otherUserId, propertyId, callback) {
+  if (USE_FIREBASE) return fb.onChatMessages(userId, otherUserId, propertyId, callback);
+  return () => {}; // no-op unsubscribe for localStorage fallback
+}
+
+export function onNotifications(userId, callback) {
+  if (USE_FIREBASE) return fb.onNotifications(userId, callback);
+  return () => {};
+}
+
+export function onConversations(userId, callback) {
+  if (USE_FIREBASE) return fb.onConversations(userId, callback);
+  return () => {};
+}
+
+// ============================================
 // SAVED LISTINGS
 // ============================================
 export async function getSavedListings(userId) {
