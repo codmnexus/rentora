@@ -31,14 +31,16 @@ export async function createTakeoverDetail(takeoverId) {
       Room Takeover
     </div>
 
-    <!-- ₦5k Incentive Banner -->
+    <!-- ₦5k Incentive Banner — only visible to the outgoing student -->
+    ${user?.id === takeover.studentId ? `
     <div class="incentive-banner">
       <div class="incentive-icon">₦5k</div>
       <div>
         <strong>₦5,000 Incentive</strong>
-        <span>The outgoing student earns ₦5,000 when this room is successfully taken over</span>
+        <span>You earn ₦5,000 when this room is successfully taken over</span>
       </div>
     </div>
+    ` : ''}
 
     <h1 class="detail-title">${escapeHTML(takeover.title)}</h1>
     <div class="detail-subtitle">
@@ -151,9 +153,11 @@ export async function createTakeoverDetail(takeoverId) {
             <span class="booking-detail-value">${escapeHTML(takeover.area)}</span>
           </div>
         </div>
+        ${user?.id === takeover.studentId ? `
         <div class="incentive-pill">
           <span>🎉</span> You earn ₦5,000 incentive upon successful takeover
         </div>
+        ` : ''}
         <button class="contact-btn message" style="width:100%;justify-content:center;padding:14px;margin-bottom:8px" id="to-msg-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           Message Student
