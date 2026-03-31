@@ -16,6 +16,7 @@ export async function createTakeoverDetail(takeoverId) {
   await incrementTakeoverViews(takeoverId);
   const formatPrice = (p) => '₦' + p.toLocaleString();
   const user = await getCurrentUser();
+  const isLandlord = user?.role === 'landlord';
 
   const detail = document.createElement('div');
   detail.className = 'detail-view';
@@ -117,6 +118,18 @@ export async function createTakeoverDetail(takeoverId) {
         ` : ''}
 
         <!-- In-App Contact -->
+        ${isLandlord ? `
+        <div class="detail-section">
+          <div style="background:var(--color-gray-50);border:1px solid var(--color-gray-200);border-radius:var(--radius-md);padding:20px;text-align:center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-gray-400)" stroke-width="1.5" style="width:32px;height:32px;margin-bottom:8px">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 8v4M12 16h.01"/>
+            </svg>
+            <p style="font-weight:600;color:var(--color-gray-700);margin-bottom:4px">Landlords Can't Use Takeovers</p>
+            <p style="font-size:13px;color:var(--color-gray-500)">Room takeovers are a tenant-to-tenant feature. You can browse listings but can't message or reserve.</p>
+          </div>
+        </div>
+        ` : `
         <div class="detail-section">
           <div class="detail-section-title">Contact Student</div>
           <div class="inapp-notice">
@@ -134,6 +147,7 @@ export async function createTakeoverDetail(takeoverId) {
             Report listing
           </button>
         </div>
+        `}
       </div>
 
       <!-- Sticky Card -->
@@ -158,6 +172,7 @@ export async function createTakeoverDetail(takeoverId) {
           <span>🎉</span> You earn ₦5,000 incentive upon successful takeover
         </div>
         ` : ''}
+        ${!isLandlord ? `
         <button class="contact-btn message" style="width:100%;justify-content:center;padding:14px;margin-bottom:8px" id="to-msg-card">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           Message Student
@@ -166,6 +181,9 @@ export async function createTakeoverDetail(takeoverId) {
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M5 8.5V7a3 3 0 016 0v1.5"/><rect x="3" y="8.5" width="10" height="6" rx="1.5"/></svg>
           Reserve Room (Escrow)
         </button>
+        ` : `
+        <p style="text-align:center;font-size:13px;color:var(--color-gray-400);padding:12px 0">Takeover actions are for tenants only</p>
+        `}
       </div>
     </div>
   `;

@@ -7,6 +7,30 @@ export async function createPostTakeover() {
   const user = await getCurrentUser();
   if (!user) { navigate('/login'); return document.createElement('div'); }
 
+  // Only tenants can post room takeovers — landlords use "List Property" instead
+  if (user.role === 'landlord') {
+    const blocked = document.createElement('div');
+    blocked.className = 'post-property';
+    blocked.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;text-align:center;padding:40px 20px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-gray-400)" stroke-width="1.5" style="width:56px;height:56px;margin-bottom:16px">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 8v4M12 16h.01"/>
+        </svg>
+        <h2 style="font-size:1.25rem;font-weight:700;color:var(--color-gray-800);margin-bottom:8px">Landlords Can't Post Takeovers</h2>
+        <p style="font-size:14px;color:var(--color-gray-500);max-width:400px;margin-bottom:20px">
+          Room takeovers are for tenants who want to transfer their room to another student.
+          As a landlord, you can list your property instead.
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+          <button onclick="window.location.hash='#/post-property'" style="padding:10px 24px;background:var(--color-primary-gradient);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">List a Property</button>
+          <button onclick="window.location.hash='#/landlord'" style="padding:10px 24px;background:var(--color-gray-100);color:var(--color-gray-700);border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Go to Dashboard</button>
+        </div>
+      </div>
+    `;
+    return blocked;
+  }
+
   const page = document.createElement('div');
   page.className = 'post-property';
 
