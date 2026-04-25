@@ -1,4 +1,4 @@
-import { getCurrentUser, getPropertiesByLandlord, getConversations, getPropertyById, deleteProperty, markAsRented, markAsAvailable, getInspectionsByLandlord, approveInspection, rescheduleInspection, getWallet, getUserTransactions } from '../utils/store.js';
+import { getCurrentUser, getPropertiesByLandlord, getConversations, getPropertyById, deleteProperty, markAsRented, markAsAvailable, getInspectionsByLandlord, approveInspection, rescheduleInspection, getWallet, getUserTransactions, updateUser } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
 import { escapeHTML } from '../utils/authSecurity.js';
@@ -47,6 +47,51 @@ export async function createLandlordDashboard() {
         <div class="stat-card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><circle cx="18" cy="14" r="2"/></svg></div>
         <div class="stat-card-value" id="ll-wallet-balance">₦${(wallet.balance || 0).toLocaleString()}</div>
         <div class="stat-card-label">Wallet Balance</div>
+      </div>
+    </div>
+
+    ${!user.profileCompleted ? `
+    <div class="profile-completion-banner" id="profile-completion-banner">
+      <div class="pcb-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 8v4M12 16h.01"/>
+        </svg>
+      </div>
+      <div class="pcb-content">
+        <strong>Complete your profile to build trust with tenants</strong>
+        <p>Add your property details and verify your identity to increase tenant confidence and get more inquiries.</p>
+      </div>
+      <button class="pcb-btn" id="open-profile-completion">
+        <span>Complete Profile</span>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M5 10h10M11 6l4 4-4 4"/></svg>
+      </button>
+      <button class="pcb-dismiss" id="dismiss-profile-banner" title="Dismiss">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M6 6l8 8M14 6l-8 8"/></svg>
+      </button>
+    </div>
+    ` : ''}
+
+    <!-- Profile Completion Modal -->
+    <div class="profile-modal-overlay" id="profile-modal-overlay" style="display:none">
+      <div class="profile-modal">
+        <button class="profile-modal-close" id="profile-modal-close">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M6 6l8 8M14 6l-8 8"/></svg>
+        </button>
+        <div class="profile-modal-header">
+          <div class="profile-modal-steps">
+            <div class="pm-step active" data-pm-step="1">
+              <span class="pm-step-num">1</span>
+              <span class="pm-step-label">Property Info</span>
+            </div>
+            <div class="pm-step-connector"><div class="pm-step-connector-fill" id="pm-connector-fill"></div></div>
+            <div class="pm-step" data-pm-step="2">
+              <span class="pm-step-num">2</span>
+              <span class="pm-step-label">Verification</span>
+            </div>
+          </div>
+        </div>
+        <div class="profile-modal-body" id="profile-modal-body"></div>
       </div>
     </div>
 
@@ -206,6 +251,194 @@ export async function createLandlordDashboard() {
 
   page.querySelector('#ll-wallet-stat')?.addEventListener('click', () => navigate('/payments'));
   page.querySelector('#add-property-btn').addEventListener('click', () => navigate('/post-property'));
+
+  // ===========================
+  // PROFILE COMPLETION LOGIC
+  // ===========================
+  const banner = page.querySelector('#profile-completion-banner');
+  const modalOverlay = page.querySelector('#profile-modal-overlay');
+  const modalBody = page.querySelector('#profile-modal-body');
+  let pmCurrentStep = 1;
+  let pmData = {
+    propertyType: user.propertyType || '',
+    propertyCount: user.propertyCount || ''
+  };
+
+  // Dismiss banner
+  page.querySelector('#dismiss-profile-banner')?.addEventListener('click', () => {
+    banner.style.opacity = '0';
+    banner.style.transform = 'translateY(-10px)';
+    setTimeout(() => { banner.style.display = 'none'; }, 300);
+  });
+
+  // Open modal
+  page.querySelector('#open-profile-completion')?.addEventListener('click', () => {
+    modalOverlay.style.display = '';
+    pmCurrentStep = 1;
+    renderPmStep();
+  });
+
+  // Close modal
+  page.querySelector('#profile-modal-close')?.addEventListener('click', () => {
+    modalOverlay.style.display = 'none';
+  });
+  modalOverlay?.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) modalOverlay.style.display = 'none';
+  });
+
+  function updatePmSteps() {
+    page.querySelectorAll('.pm-step').forEach(s => {
+      const step = parseInt(s.dataset.pmStep);
+      s.classList.toggle('active', step <= pmCurrentStep);
+      s.classList.toggle('done', step < pmCurrentStep);
+    });
+    const fill = page.querySelector('#pm-connector-fill');
+    if (fill) fill.style.width = pmCurrentStep >= 2 ? '100%' : '0%';
+  }
+
+  function renderPmStep() {
+    updatePmSteps();
+    if (pmCurrentStep === 1) renderPmPropertyInfo();
+    else renderPmVerification();
+  }
+
+  function renderPmPropertyInfo() {
+    modalBody.innerHTML = `
+      <h3 class="pm-title">About your properties</h3>
+      <p class="pm-subtitle">Help tenants discover your listings</p>
+      <div class="pm-form">
+        <div class="pm-field">
+          <label>Type of Property</label>
+          <select id="pm-property-type">
+            <option value="">Select type</option>
+            <option value="self-contain" ${pmData.propertyType === 'self-contain' ? 'selected' : ''}>Self-Contain</option>
+            <option value="single-room" ${pmData.propertyType === 'single-room' ? 'selected' : ''}>Single Room</option>
+            <option value="shared" ${pmData.propertyType === 'shared' ? 'selected' : ''}>Shared Apartment</option>
+            <option value="flat" ${pmData.propertyType === 'flat' ? 'selected' : ''}>Flat / Apartment</option>
+            <option value="hostel" ${pmData.propertyType === 'hostel' ? 'selected' : ''}>Hostel</option>
+            <option value="mixed" ${pmData.propertyType === 'mixed' ? 'selected' : ''}>Mixed / Multiple Types</option>
+          </select>
+        </div>
+        <div class="pm-field">
+          <label>How many properties do you manage?</label>
+          <select id="pm-property-count">
+            <option value="">Select</option>
+            <option value="1" ${pmData.propertyCount === '1' ? 'selected' : ''}>1</option>
+            <option value="2-5" ${pmData.propertyCount === '2-5' ? 'selected' : ''}>2 – 5</option>
+            <option value="6-10" ${pmData.propertyCount === '6-10' ? 'selected' : ''}>6 – 10</option>
+            <option value="10+" ${pmData.propertyCount === '10+' ? 'selected' : ''}>10+</option>
+          </select>
+        </div>
+        <div class="pm-actions">
+          <button class="pm-btn-primary" id="pm-next-1">
+            <span>Next: Verification</span>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M5 10h10M11 6l4 4-4 4"/></svg>
+          </button>
+          <button class="pm-btn-ghost" id="pm-skip-1">Skip & finish</button>
+        </div>
+      </div>
+    `;
+
+    modalBody.querySelector('#pm-next-1').addEventListener('click', () => {
+      pmData.propertyType = modalBody.querySelector('#pm-property-type')?.value || '';
+      pmData.propertyCount = modalBody.querySelector('#pm-property-count')?.value || '';
+      pmCurrentStep = 2;
+      renderPmStep();
+    });
+
+    modalBody.querySelector('#pm-skip-1').addEventListener('click', async () => {
+      await finishProfileCompletion();
+    });
+  }
+
+  function renderPmVerification() {
+    modalBody.innerHTML = `
+      <h3 class="pm-title">Verify your identity</h3>
+      <p class="pm-subtitle">Build trust with tenants by verifying your identity</p>
+      <div class="pm-form">
+        <div class="pm-dropzone" id="pm-verify-dropzone">
+          <div class="pm-dropzone-icon">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" width="44" height="44">
+              <rect x="6" y="10" width="36" height="28" rx="3"/>
+              <circle cx="18" cy="24" r="5"/>
+              <path d="M28 18h8M28 24h8M28 30h6"/>
+            </svg>
+          </div>
+          <strong>Upload Valid ID / CAC Document</strong>
+          <span>Click or drag to upload (JPG, PNG, PDF)</span>
+          <input type="file" id="pm-verify-file" accept="image/*,.pdf" style="display:none" />
+        </div>
+        <div id="pm-verify-preview"></div>
+
+        <div class="pm-benefits">
+          <div class="pm-benefit">
+            <svg viewBox="0 0 20 20" fill="none" stroke="#22C55E" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            <span>Verified badge on your profile</span>
+          </div>
+          <div class="pm-benefit">
+            <svg viewBox="0 0 20 20" fill="none" stroke="#22C55E" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            <span>Higher response rates from tenants</span>
+          </div>
+          <div class="pm-benefit">
+            <svg viewBox="0 0 20 20" fill="none" stroke="#22C55E" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            <span>Priority in search results</span>
+          </div>
+        </div>
+
+        <div class="pm-actions">
+          <button class="pm-btn-primary" id="pm-finish">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            <span>Complete Profile</span>
+          </button>
+          <button class="pm-btn-ghost" id="pm-skip-2">Skip for now</button>
+        </div>
+      </div>
+    `;
+
+    // File upload
+    const dropzone = modalBody.querySelector('#pm-verify-dropzone');
+    const fileInput = modalBody.querySelector('#pm-verify-file');
+    const preview = modalBody.querySelector('#pm-verify-preview');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault(); dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handlePmFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handlePmFile(e.target.files[0]); });
+
+    function handlePmFile(file) {
+      preview.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(16,185,129,0.08);border-radius:10px;font-size:13px;color:#059669;font-weight:600;margin-top:8px">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+          ${escapeHTML(file.name)} uploaded
+        </div>
+      `;
+    }
+
+    modalBody.querySelector('#pm-finish').addEventListener('click', () => finishProfileCompletion());
+    modalBody.querySelector('#pm-skip-2').addEventListener('click', () => finishProfileCompletion());
+  }
+
+  async function finishProfileCompletion() {
+    const updates = {
+      propertyType: pmData.propertyType,
+      propertyCount: pmData.propertyCount,
+      profileCompleted: true
+    };
+    try {
+      await updateUser(user.id, updates);
+    } catch (e) { /* non-fatal */ }
+
+    // Hide banner and modal
+    if (banner) banner.style.display = 'none';
+    if (modalOverlay) modalOverlay.style.display = 'none';
+
+    showToast('Profile completed! 🎉', 'success');
+  }
+
   renderListings();
   return page;
 }

@@ -167,10 +167,6 @@ export function createLoginPage() {
         <div class="signup-progress-dot active" data-step="1"><span>1</span></div>
         <div class="signup-progress-connector"><div class="signup-progress-connector-fill" id="signup-connector-1"></div></div>
         <div class="signup-progress-dot" data-step="2"><span>2</span></div>
-        <div class="signup-progress-connector"><div class="signup-progress-connector-fill" id="signup-connector-2"></div></div>
-        <div class="signup-progress-dot" data-step="3"><span>3</span></div>
-        <div class="signup-progress-connector"><div class="signup-progress-connector-fill" id="signup-connector-3"></div></div>
-        <div class="signup-progress-dot" data-step="4"><span>4</span></div>
       </div>
 
       <!-- Step content area -->
@@ -231,9 +227,7 @@ export function createLoginPage() {
   // ===========================
   let obStep = 0;
   const obData = {
-    role: '', name: '', email: '', phone: '', password: '', confirmPassword: '',
-    department: '', budget: '', preferredArea: '', genderPreference: '',
-    propertyType: '', propertyCount: '', createdUserId: null
+    role: '', name: '', email: '', phone: '', password: '', confirmPassword: ''
   };
 
   const signupContent = page.querySelector('#signup-content');
@@ -262,8 +256,6 @@ export function createLoginPage() {
 
     if (obStep === 1) renderStep1();
     else if (obStep === 2) renderStep2();
-    else if (obStep === 3) renderStep3();
-    else if (obStep === 4) renderStep4();
   }
 
   // ---- STEP 1: Create Account ----
@@ -444,7 +436,8 @@ export function createLoginPage() {
         <div class="signup-error" id="ob-error-2" style="display:none"></div>
 
         <button class="signup-btn-primary" id="ob-next-2">
-          <span>Next</span>
+          <span>Create Account</span>
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
         </button>
       </div>
     `;
@@ -485,213 +478,31 @@ export function createLoginPage() {
       if (result.error) {
         errEl.textContent = result.error;
         errEl.style.display = '';
-        btn.querySelector('span').textContent = 'Next';
+        btn.querySelector('span').textContent = 'Create Account';
         btn.disabled = false;
         return;
       }
 
-      if (result.user?.id) obData.createdUserId = result.user.id;
-
       if (result.emailVerificationSent) {
         showToast('Account created! Check your email to verify.', 'success');
+        // Show verification notice on login view
+        showLogin();
+        showLoginSection('verify-notice');
+        return;
       } else {
         await loginUser(obData.email, obData.password);
-        showToast('Account created! 🎉', 'success');
+        showToast(`Welcome to Rentora, ${obData.name.split(' ')[0]}! 🎉`, 'success');
       }
 
-      obStep = 3;
-      renderStep('forward');
+      // Redirect to dashboard immediately
+      if (obData.role === 'landlord') navigate('/landlord');
+      else navigate('/');
+      location.reload();
     });
   }
 
-  // ---- STEP 3: Personalization ----
-  function renderStep3() {
-    const isTenant = obData.role === 'tenant';
-
-    signupContent.innerHTML = `
-      <div class="signup-step">
-        <div class="signup-step-tag">Step 3 of 4 · Optional</div>
-        <h2 class="signup-step-title">${isTenant ? 'Tell us your preferences' : 'About your properties'}</h2>
-        <p class="signup-step-subtitle">${isTenant ? 'Help us find the perfect accommodation for you' : 'Help tenants discover your listings'}</p>
-
-        <div class="signup-form">
-          ${isTenant ? `
-            <div class="signup-field">
-              <label>Department</label>
-              <input type="text" id="ob-department" placeholder="e.g. Computer Science" value="${obData.department}" />
-            </div>
-            <div class="signup-field-grid">
-              <div class="signup-field">
-                <label>Budget Range (₦/yr)</label>
-                <select id="ob-budget">
-                  <option value="">Select range</option>
-                  <option value="0-80000" ${obData.budget === '0-80000' ? 'selected' : ''}>Under ₦80,000</option>
-                  <option value="80000-150000" ${obData.budget === '80000-150000' ? 'selected' : ''}>₦80,000 – ₦150,000</option>
-                  <option value="150000-250000" ${obData.budget === '150000-250000' ? 'selected' : ''}>₦150,000 – ₦250,000</option>
-                  <option value="250000+" ${obData.budget === '250000+' ? 'selected' : ''}>₦250,000+</option>
-                </select>
-              </div>
-              <div class="signup-field">
-                <label>Preferred Area</label>
-                <select id="ob-area">
-                  <option value="">Any area</option>
-                  <option value="FUTA South Gate" ${obData.preferredArea === 'FUTA South Gate' ? 'selected' : ''}>FUTA South Gate</option>
-                  <option value="FUTA North Gate" ${obData.preferredArea === 'FUTA North Gate' ? 'selected' : ''}>FUTA North Gate</option>
-                  <option value="Roadblock" ${obData.preferredArea === 'Roadblock' ? 'selected' : ''}>Roadblock</option>
-                  <option value="Ijapo Estate" ${obData.preferredArea === 'Ijapo Estate' ? 'selected' : ''}>Ijapo Estate</option>
-                  <option value="Oba Ile" ${obData.preferredArea === 'Oba Ile' ? 'selected' : ''}>Oba Ile</option>
-                  <option value="Aule" ${obData.preferredArea === 'Aule' ? 'selected' : ''}>Aule</option>
-                </select>
-              </div>
-            </div>
-            <div class="signup-field">
-              <label>Roommate Gender Preference</label>
-              <select id="ob-gender-pref">
-                <option value="">No preference</option>
-                <option value="male" ${obData.genderPreference === 'male' ? 'selected' : ''}>Male only</option>
-                <option value="female" ${obData.genderPreference === 'female' ? 'selected' : ''}>Female only</option>
-              </select>
-            </div>
-          ` : `
-            <div class="signup-field">
-              <label>Type of Property</label>
-              <select id="ob-property-type">
-                <option value="">Select type</option>
-                <option value="self-contain" ${obData.propertyType === 'self-contain' ? 'selected' : ''}>Self-Contain</option>
-                <option value="single-room" ${obData.propertyType === 'single-room' ? 'selected' : ''}>Single Room</option>
-                <option value="shared" ${obData.propertyType === 'shared' ? 'selected' : ''}>Shared Apartment</option>
-                <option value="flat" ${obData.propertyType === 'flat' ? 'selected' : ''}>Flat / Apartment</option>
-                <option value="hostel" ${obData.propertyType === 'hostel' ? 'selected' : ''}>Hostel</option>
-                <option value="mixed" ${obData.propertyType === 'mixed' ? 'selected' : ''}>Mixed / Multiple Types</option>
-              </select>
-            </div>
-            <div class="signup-field">
-              <label>How many properties do you manage?</label>
-              <select id="ob-property-count">
-                <option value="">Select</option>
-                <option value="1" ${obData.propertyCount === '1' ? 'selected' : ''}>1</option>
-                <option value="2-5" ${obData.propertyCount === '2-5' ? 'selected' : ''}>2 – 5</option>
-                <option value="6-10" ${obData.propertyCount === '6-10' ? 'selected' : ''}>6 – 10</option>
-                <option value="10+" ${obData.propertyCount === '10+' ? 'selected' : ''}>10+</option>
-              </select>
-            </div>
-          `}
-
-          <button class="signup-btn-primary" id="ob-next-3"><span>Continue</span></button>
-          <button class="signup-btn-ghost" id="ob-skip-3">Skip for now</button>
-        </div>
-      </div>
-    `;
-
-    function saveStep3() {
-      if (isTenant) {
-        obData.department = signupContent.querySelector('#ob-department')?.value?.trim() || '';
-        obData.budget = signupContent.querySelector('#ob-budget')?.value || '';
-        obData.preferredArea = signupContent.querySelector('#ob-area')?.value || '';
-        obData.genderPreference = signupContent.querySelector('#ob-gender-pref')?.value || '';
-      } else {
-        obData.propertyType = signupContent.querySelector('#ob-property-type')?.value || '';
-        obData.propertyCount = signupContent.querySelector('#ob-property-count')?.value || '';
-      }
-    }
-
-    signupContent.querySelector('#ob-next-3').addEventListener('click', async () => {
-      saveStep3();
-      if (obData.createdUserId) {
-        const updates = isTenant
-          ? { department: obData.department, budget: obData.budget, preferredArea: obData.preferredArea, genderPreference: obData.genderPreference }
-          : { propertyType: obData.propertyType, propertyCount: obData.propertyCount };
-        try { await updateUser(obData.createdUserId, updates); } catch(e) { /* non-fatal */ }
-      }
-      obStep = 4;
-      renderStep('forward');
-    });
-
-    signupContent.querySelector('#ob-skip-3').addEventListener('click', () => {
-      obStep = 4; renderStep('forward');
-    });
-  }
-
-  // ---- STEP 4: Verification ----
-  function renderStep4() {
-    const isTenant = obData.role === 'tenant';
-
-    signupContent.innerHTML = `
-      <div class="signup-step">
-        <div class="signup-step-tag">Step 4 of 4 · Optional</div>
-        <h2 class="signup-step-title">${isTenant ? 'Verify your student status' : 'Verify your identity'}</h2>
-        <p class="signup-step-subtitle">${isTenant ? 'Verified students get a trust badge on their profile' : 'Build trust with tenants by verifying your identity'}</p>
-
-        <div class="signup-dropzone" id="ob-verify-dropzone">
-          <div class="signup-dropzone-icon">
-            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
-              <rect x="6" y="10" width="36" height="28" rx="3"/>
-              <circle cx="18" cy="24" r="5"/>
-              <path d="M28 18h8M28 24h8M28 30h6"/>
-            </svg>
-          </div>
-          <strong>${isTenant ? 'Upload Student ID Card' : 'Upload Valid ID / CAC Document'}</strong>
-          <span>Click or drag to upload (JPG, PNG, PDF)</span>
-          <input type="file" id="ob-verify-file" accept="image/*,.pdf" style="display:none" />
-        </div>
-        <div id="ob-verify-preview" style="margin-top:8px"></div>
-
-        <div class="signup-benefits">
-          <div class="signup-benefit">
-            <svg viewBox="0 0 20 20" fill="none" stroke="#22C55E" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
-            <span>Trust badge on your profile</span>
-          </div>
-          <div class="signup-benefit">
-            <svg viewBox="0 0 20 20" fill="none" stroke="#22C55E" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
-            <span>Higher response rates from ${isTenant ? 'landlords' : 'tenants'}</span>
-          </div>
-          <div class="signup-benefit">
-            <svg viewBox="0 0 20 20" fill="none" stroke="#22C55E" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
-            <span>Priority in search results</span>
-          </div>
-        </div>
-
-        <button class="signup-btn-primary" id="ob-finish-btn">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
-          <span>Complete Setup</span>
-        </button>
-        <button class="signup-btn-ghost" id="ob-skip-4">Skip for now</button>
-      </div>
-    `;
-
-    // File upload
-    const dropzone = signupContent.querySelector('#ob-verify-dropzone');
-    const fileInput = signupContent.querySelector('#ob-verify-file');
-    const preview = signupContent.querySelector('#ob-verify-preview');
-
-    dropzone.addEventListener('click', () => fileInput.click());
-    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
-    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-    dropzone.addEventListener('drop', (e) => {
-      e.preventDefault(); dropzone.classList.remove('dragover');
-      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-    });
-    fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
-
-    function handleFile(file) {
-      preview.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(16,185,129,0.08);border-radius:10px;font-size:13px;color:#059669;font-weight:600">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
-          ${sanitizeInput(file.name)} uploaded
-        </div>
-      `;
-    }
-
-    signupContent.querySelector('#ob-finish-btn').addEventListener('click', () => finishOnboarding());
-    signupContent.querySelector('#ob-skip-4').addEventListener('click', () => finishOnboarding());
-  }
-
-  function finishOnboarding() {
-    showToast(`Welcome to Rentora, ${obData.name.split(' ')[0]}! 🎉`, 'success');
-    if (obData.role === 'landlord') navigate('/landlord');
-    else navigate('/');
-    location.reload();
-  }
+  // Steps 3 & 4 (preferences + verification) are now handled
+  // post-login via the profile completion banner on the dashboard.
 
   // ===========================
   // LOGIN HANDLERS (untouched)

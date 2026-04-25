@@ -52,6 +52,51 @@ export async function createTenantDashboard() {
       </div>
     </div>
 
+    ${!user.profileCompleted ? `
+    <div class="profile-completion-banner" id="profile-completion-banner">
+      <div class="pcb-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 8v4M12 16h.01"/>
+        </svg>
+      </div>
+      <div class="pcb-content">
+        <strong>Complete your profile to get the most out of Rentora</strong>
+        <p>Add your housing preferences and verify your student status to get personalized recommendations and a trust badge.</p>
+      </div>
+      <button class="pcb-btn" id="open-profile-completion">
+        <span>Complete Profile</span>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M5 10h10M11 6l4 4-4 4"/></svg>
+      </button>
+      <button class="pcb-dismiss" id="dismiss-profile-banner" title="Dismiss">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M6 6l8 8M14 6l-8 8"/></svg>
+      </button>
+    </div>
+    ` : ''}
+
+    <!-- Profile Completion Modal -->
+    <div class="profile-modal-overlay" id="profile-modal-overlay" style="display:none">
+      <div class="profile-modal">
+        <button class="profile-modal-close" id="profile-modal-close">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M6 6l8 8M14 6l-8 8"/></svg>
+        </button>
+        <div class="profile-modal-header">
+          <div class="profile-modal-steps">
+            <div class="pm-step active" data-pm-step="1">
+              <span class="pm-step-num">1</span>
+              <span class="pm-step-label">Preferences</span>
+            </div>
+            <div class="pm-step-connector"><div class="pm-step-connector-fill" id="pm-connector-fill"></div></div>
+            <div class="pm-step" data-pm-step="2">
+              <span class="pm-step-num">2</span>
+              <span class="pm-step-label">Verification</span>
+            </div>
+          </div>
+        </div>
+        <div class="profile-modal-body" id="profile-modal-body"></div>
+      </div>
+    </div>
+
     <div class="dashboard-tabs">
       <div class="dashboard-tab active" data-tab="saved">Saved Homes</div>
       <div class="dashboard-tab" data-tab="wallet">Wallet</div>
@@ -307,6 +352,216 @@ export async function createTenantDashboard() {
 
   page.querySelector('#tenant-wallet-stat')?.addEventListener('click', () => navigate('/payments'));
   page.querySelector('#post-takeover-btn').addEventListener('click', () => navigate('/post-takeover'));
+
+  // ===========================
+  // PROFILE COMPLETION LOGIC
+  // ===========================
+  const banner = page.querySelector('#profile-completion-banner');
+  const modalOverlay = page.querySelector('#profile-modal-overlay');
+  const modalBody = page.querySelector('#profile-modal-body');
+  let pmCurrentStep = 1;
+  let pmData = {
+    department: user.department || '',
+    budget: user.budget || '',
+    preferredArea: user.preferredArea || '',
+    genderPreference: user.genderPreference || ''
+  };
+
+  // Dismiss banner
+  page.querySelector('#dismiss-profile-banner')?.addEventListener('click', () => {
+    banner.style.opacity = '0';
+    banner.style.transform = 'translateY(-10px)';
+    setTimeout(() => { banner.style.display = 'none'; }, 300);
+  });
+
+  // Open modal
+  page.querySelector('#open-profile-completion')?.addEventListener('click', () => {
+    modalOverlay.style.display = '';
+    pmCurrentStep = 1;
+    renderPmStep();
+  });
+
+  // Close modal
+  page.querySelector('#profile-modal-close')?.addEventListener('click', () => {
+    modalOverlay.style.display = 'none';
+  });
+  modalOverlay?.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) modalOverlay.style.display = 'none';
+  });
+
+  function updatePmSteps() {
+    page.querySelectorAll('.pm-step').forEach(s => {
+      const step = parseInt(s.dataset.pmStep);
+      s.classList.toggle('active', step <= pmCurrentStep);
+      s.classList.toggle('done', step < pmCurrentStep);
+    });
+    const fill = page.querySelector('#pm-connector-fill');
+    if (fill) fill.style.width = pmCurrentStep >= 2 ? '100%' : '0%';
+  }
+
+  function renderPmStep() {
+    updatePmSteps();
+    if (pmCurrentStep === 1) renderPmPreferences();
+    else renderPmVerification();
+  }
+
+  function renderPmPreferences() {
+    modalBody.innerHTML = `
+      <h3 class="pm-title">Tell us your preferences</h3>
+      <p class="pm-subtitle">Help us find the perfect accommodation for you</p>
+      <div class="pm-form">
+        <div class="pm-field">
+          <label>Department</label>
+          <input type="text" id="pm-department" placeholder="e.g. Computer Science" value="${pmData.department}" />
+        </div>
+        <div class="pm-field-row">
+          <div class="pm-field">
+            <label>Budget Range (₦/yr)</label>
+            <select id="pm-budget">
+              <option value="">Select range</option>
+              <option value="0-80000" ${pmData.budget === '0-80000' ? 'selected' : ''}>Under ₦80,000</option>
+              <option value="80000-150000" ${pmData.budget === '80000-150000' ? 'selected' : ''}>₦80,000 – ₦150,000</option>
+              <option value="150000-250000" ${pmData.budget === '150000-250000' ? 'selected' : ''}>₦150,000 – ₦250,000</option>
+              <option value="250000+" ${pmData.budget === '250000+' ? 'selected' : ''}>₦250,000+</option>
+            </select>
+          </div>
+          <div class="pm-field">
+            <label>Preferred Area</label>
+            <select id="pm-area">
+              <option value="">Any area</option>
+              <option value="FUTA South Gate" ${pmData.preferredArea === 'FUTA South Gate' ? 'selected' : ''}>FUTA South Gate</option>
+              <option value="FUTA North Gate" ${pmData.preferredArea === 'FUTA North Gate' ? 'selected' : ''}>FUTA North Gate</option>
+              <option value="Roadblock" ${pmData.preferredArea === 'Roadblock' ? 'selected' : ''}>Roadblock</option>
+              <option value="Ijapo Estate" ${pmData.preferredArea === 'Ijapo Estate' ? 'selected' : ''}>Ijapo Estate</option>
+              <option value="Oba Ile" ${pmData.preferredArea === 'Oba Ile' ? 'selected' : ''}>Oba Ile</option>
+              <option value="Aule" ${pmData.preferredArea === 'Aule' ? 'selected' : ''}>Aule</option>
+            </select>
+          </div>
+        </div>
+        <div class="pm-field">
+          <label>Roommate Gender Preference</label>
+          <select id="pm-gender-pref">
+            <option value="">No preference</option>
+            <option value="male" ${pmData.genderPreference === 'male' ? 'selected' : ''}>Male only</option>
+            <option value="female" ${pmData.genderPreference === 'female' ? 'selected' : ''}>Female only</option>
+          </select>
+        </div>
+        <div class="pm-actions">
+          <button class="pm-btn-primary" id="pm-next-1">
+            <span>Next: Verification</span>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M5 10h10M11 6l4 4-4 4"/></svg>
+          </button>
+          <button class="pm-btn-ghost" id="pm-skip-1">Skip & finish</button>
+        </div>
+      </div>
+    `;
+
+    modalBody.querySelector('#pm-next-1').addEventListener('click', () => {
+      pmData.department = modalBody.querySelector('#pm-department')?.value?.trim() || '';
+      pmData.budget = modalBody.querySelector('#pm-budget')?.value || '';
+      pmData.preferredArea = modalBody.querySelector('#pm-area')?.value || '';
+      pmData.genderPreference = modalBody.querySelector('#pm-gender-pref')?.value || '';
+      pmCurrentStep = 2;
+      renderPmStep();
+    });
+
+    modalBody.querySelector('#pm-skip-1').addEventListener('click', async () => {
+      await finishProfileCompletion();
+    });
+  }
+
+  function renderPmVerification() {
+    modalBody.innerHTML = `
+      <h3 class="pm-title">Verify your student status</h3>
+      <p class="pm-subtitle">Verified students get a trust badge and higher response rates</p>
+      <div class="pm-form">
+        <div class="pm-dropzone" id="pm-verify-dropzone">
+          <div class="pm-dropzone-icon">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" width="44" height="44">
+              <rect x="6" y="10" width="36" height="28" rx="3"/>
+              <circle cx="18" cy="24" r="5"/>
+              <path d="M28 18h8M28 24h8M28 30h6"/>
+            </svg>
+          </div>
+          <strong>Upload Student ID Card</strong>
+          <span>Click or drag to upload (JPG, PNG, PDF)</span>
+          <input type="file" id="pm-verify-file" accept="image/*,.pdf" style="display:none" />
+        </div>
+        <div id="pm-verify-preview"></div>
+
+        <div class="pm-benefits">
+          <div class="pm-benefit">
+            <svg viewBox="0 0 20 20" fill="none" stroke="#22C55E" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            <span>Trust badge on your profile</span>
+          </div>
+          <div class="pm-benefit">
+            <svg viewBox="0 0 20 20" fill="none" stroke="#22C55E" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            <span>Higher response rates from landlords</span>
+          </div>
+          <div class="pm-benefit">
+            <svg viewBox="0 0 20 20" fill="none" stroke="#22C55E" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            <span>Priority in search results</span>
+          </div>
+        </div>
+
+        <div class="pm-actions">
+          <button class="pm-btn-primary" id="pm-finish">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+            <span>Complete Profile</span>
+          </button>
+          <button class="pm-btn-ghost" id="pm-skip-2">Skip for now</button>
+        </div>
+      </div>
+    `;
+
+    // File upload
+    const dropzone = modalBody.querySelector('#pm-verify-dropzone');
+    const fileInput = modalBody.querySelector('#pm-verify-file');
+    const preview = modalBody.querySelector('#pm-verify-preview');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault(); dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handlePmFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handlePmFile(e.target.files[0]); });
+
+    function handlePmFile(file) {
+      preview.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(16,185,129,0.08);border-radius:10px;font-size:13px;color:#059669;font-weight:600;margin-top:8px">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M7 10l2 2 4-4"/></svg>
+          ${escapeHTML(file.name)} uploaded
+        </div>
+      `;
+    }
+
+    modalBody.querySelector('#pm-finish').addEventListener('click', () => finishProfileCompletion());
+    modalBody.querySelector('#pm-skip-2').addEventListener('click', () => finishProfileCompletion());
+  }
+
+  async function finishProfileCompletion() {
+    const updates = {
+      department: pmData.department,
+      budget: pmData.budget,
+      preferredArea: pmData.preferredArea,
+      genderPreference: pmData.genderPreference,
+      profileCompleted: true
+    };
+    try {
+      await updateUser(user.id, updates);
+    } catch (e) { /* non-fatal */ }
+
+    // Hide banner and modal
+    if (banner) banner.style.display = 'none';
+    if (modalOverlay) modalOverlay.style.display = 'none';
+
+    // Show success feedback
+    const { showToast } = await import('./header.js');
+    showToast('Profile completed! 🎉', 'success');
+  }
+
   renderSaved();
   return page;
 }

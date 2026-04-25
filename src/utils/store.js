@@ -46,7 +46,8 @@ export async function createUser({ name, email, phone, password, role, ...extra 
   if (users.find(u => u.email === email)) return { error: 'Email already exists' };
   const user = {
     id: _genId(), name, email, phone, password, role, ...extra,
-    verified: role === 'admin', avatar: name.charAt(0).toUpperCase(),
+    verified: role === 'admin', profileCompleted: false,
+    avatar: name.charAt(0).toUpperCase(),
     createdAt: new Date().toISOString()
   };
   users.push(user);

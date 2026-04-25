@@ -1,4 +1,4 @@
-import { getCurrentUser, getProperties, getPendingProperties, getUsers, approveProperty, rejectProperty, verifyLandlord, banUser, getAnalytics, getPendingTakeovers, approveTakeover, rejectTakeover, getPendingReports, resolveReport, dismissReport, getPropertyById, getTakeoverById } from '../utils/store.js';
+import { getCurrentUser, getProperties, getPendingProperties, getUsers, approveProperty, rejectProperty, verifyLandlord, banUser, getAnalytics, getPendingTakeovers, approveTakeover, rejectTakeover, getPendingReports, resolveReport, dismissReport, getPropertyById, getTakeoverById, deleteProperty, getUserById, updateUser } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
 
@@ -99,47 +99,235 @@ export async function createAdminPanel() {
 
   async function renderReports() {
     const items = await getPendingReports();
-    tabContent.innerHTML = items.length === 0 ? '<div class="no-results"><h3>No pending reports</h3><p>Users haven\'t reported any issues</p></div>' : '';
-    if (items.length === 0) return;
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'overflow-x:auto;-webkit-overflow-scrolling:touch';
-    const table = document.createElement('table');
-    table.className = 'admin-table';
-    table.innerHTML = `
-      <thead><tr><th>Reporter</th><th>Type</th><th>Reason</th><th>Details</th><th>Date</th><th>Actions</th></tr></thead>
-      <tbody>
-        ${items.map(r => `
-          <tr>
-            <td style="font-weight:600">${r.reporterName}</td>
-            <td><span class="status-badge pending">${r.targetType}</span></td>
-            <td>${r.reason}</td>
-            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${r.details || '—'}</td>
-            <td>${new Date(r.createdAt).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })}</td>
-            <td>
-              <button class="action-btn approve" data-resolve="${r.id}">Resolve</button>
-              <button class="action-btn reject" data-dismiss="${r.id}">Dismiss</button>
-            </td>
-          </tr>
+    if (items.length === 0) {
+      tabContent.innerHTML = '<div class="no-results"><h3>No pending reports</h3><p>Users haven\'t reported any issues</p></div>';
+      return;
+    }
+
+    // Enrich reports with target data
+    const enriched = await Promise.all(items.map(async (r) => {
+      let target = null;
+      let targetOwner = null;
+      if (r.targetType === 'property') {
+        target = await getPropertyById(r.targetId);
+        if (target?.landlordId) targetOwner = await getUserById(target.landlordId);
+      } else if (r.targetType === 'takeover') {
+        target = await getTakeoverById(r.targetId);
+        if (target?.studentId) targetOwner = await getUserById(target.studentId);
+      }
+      return { ...r, target, targetOwner };
+    }));
+
+    tabContent.innerHTML = `
+      <div class="admin-reports-list">
+        ${enriched.map((r, i) => `
+          <div class="admin-report-card" data-report-idx="${i}">
+            <div class="admin-report-header">
+              <div class="admin-report-meta">
+                <span class="admin-report-type-badge ${r.targetType}">${r.targetType === 'property' ? '🏠 Listing' : '🔄 Takeover'}</span>
+                <span class="admin-report-reason-badge">${formatReasonLabel(r.reason)}</span>
+                <span class="admin-report-date">${new Date(r.createdAt).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+              <button class="admin-report-expand" data-expand="${i}" title="Expand">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 8l4 4 4-4"/></svg>
+              </button>
+            </div>
+
+            <div class="admin-report-summary">
+              <div class="admin-report-reporter">
+                <div class="admin-report-avatar">${r.reporterName?.charAt(0) || '?'}</div>
+                <div>
+                  <strong>${r.reporterName}</strong> reported ${r.targetType === 'property' ? 'a listing' : 'a takeover'}
+                  <div class="admin-report-preview">${r.details || 'No additional details provided'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="admin-report-detail" id="report-detail-${i}" style="display:none">
+              ${r.target ? `
+                <div class="admin-report-target-card">
+                  <div class="admin-report-target-header">
+                    <div class="admin-report-target-icon">${r.targetType === 'property' ? '🏠' : '🔄'}</div>
+                    <div class="admin-report-target-info">
+                      <strong>${r.target.title || 'Untitled'}</strong>
+                      <span>${r.target.area || ''} ${r.target.price ? ' · ₦' + r.target.price.toLocaleString() : ''}</span>
+                    </div>
+                    <span class="status-badge ${r.target.status === 'approved' ? 'approved' : r.target.status === 'rejected' ? 'rejected' : 'pending'}">${r.target.status || 'unknown'}</span>
+                  </div>
+                  ${r.targetOwner ? `
+                    <div class="admin-report-owner">
+                      <span>Posted by:</span>
+                      <strong>${r.targetOwner.name}</strong>
+                      <span class="admin-report-owner-email">${r.targetOwner.email}</span>
+                      ${r.targetOwner.banned ? '<span class="status-badge rejected">BANNED</span>' : ''}
+                    </div>
+                  ` : ''}
+                </div>
+              ` : '<div class="admin-report-target-missing">⚠️ Reported content no longer exists or could not be loaded</div>'}
+
+              <div class="admin-report-actions-grid">
+                ${r.target && r.target.status !== 'rejected' ? `
+                  <button class="admin-action-btn danger" data-action="takedown" data-report-id="${r.id}" data-target-id="${r.targetId}" data-target-type="${r.targetType}">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    <span>Take Down</span>
+                    <small>Remove listing from platform</small>
+                  </button>
+                ` : ''}
+                ${r.targetOwner && !r.targetOwner.banned ? `
+                  <button class="admin-action-btn danger-outline" data-action="ban-owner" data-report-id="${r.id}" data-owner-id="${r.targetOwner.id}" data-owner-name="${r.targetOwner.name}">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M4.93 4.93l10.14 10.14"/></svg>
+                    <span>Ban User</span>
+                    <small>Ban ${r.targetOwner.name}</small>
+                  </button>
+                ` : ''}
+                ${r.targetOwner && !r.targetOwner.banned ? `
+                  <button class="admin-action-btn warning" data-action="warn-owner" data-report-id="${r.id}" data-owner-id="${r.targetOwner.id}" data-owner-name="${r.targetOwner.name}">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10 2L1 18h18L10 2zM10 8v4M10 14h.01"/></svg>
+                    <span>Warn User</span>
+                    <small>Send a warning</small>
+                  </button>
+                ` : ''}
+                ${r.target ? `
+                  <button class="admin-action-btn neutral" data-action="view-target" data-target-id="${r.targetId}" data-target-type="${r.targetType}">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="3"/><path d="M1 10s4-7 9-7 9 7 9 7-4 7-9 7-9-7-9-7z"/></svg>
+                    <span>View Content</span>
+                    <small>Open reported item</small>
+                  </button>
+                ` : ''}
+              </div>
+
+              <div class="admin-report-resolution">
+                <div class="admin-report-resolution-label">Resolution</div>
+                <div class="admin-report-resolution-actions">
+                  <button class="action-btn approve" data-action="resolve" data-report-id="${r.id}">✅ Mark Resolved</button>
+                  <button class="action-btn reject" data-action="dismiss" data-report-id="${r.id}">Dismiss Report</button>
+                </div>
+              </div>
+            </div>
+          </div>
         `).join('')}
-      </tbody>
+      </div>
     `;
-    wrapper.appendChild(table);
-    tabContent.appendChild(wrapper);
-    table.querySelectorAll('[data-resolve]').forEach(b => b.addEventListener('click', async () => { await resolveReport(b.dataset.resolve, 'Action taken'); showToast('Report resolved ✅'); renderReports(); }));
-    table.querySelectorAll('[data-dismiss]').forEach(b => b.addEventListener('click', async () => { await dismissReport(b.dataset.dismiss); showToast('Report dismissed'); renderReports(); }));
+
+    function formatReasonLabel(reason) {
+      const labels = { fake: 'Fake / Misleading', scam: 'Suspected Scam', inappropriate: 'Inappropriate', duplicate: 'Duplicate', unavailable: 'Unavailable', other: 'Other' };
+      return labels[reason] || reason;
+    }
+
+    // Expand/collapse
+    tabContent.querySelectorAll('[data-expand]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = btn.dataset.expand;
+        const detail = tabContent.querySelector(`#report-detail-${idx}`);
+        const card = btn.closest('.admin-report-card');
+        const isOpen = detail.style.display !== 'none';
+        detail.style.display = isOpen ? 'none' : '';
+        card.classList.toggle('expanded', !isOpen);
+        btn.style.transform = isOpen ? '' : 'rotate(180deg)';
+      });
+    });
+
+    // Action handlers
+    tabContent.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.action;
+        const reportId = btn.dataset.reportId;
+
+        if (action === 'takedown') {
+          const targetId = btn.dataset.targetId;
+          const targetType = btn.dataset.targetType;
+          if (!confirm(`Are you sure you want to take down this ${targetType}? This will remove it from all public listings.`)) return;
+          btn.disabled = true;
+          btn.querySelector('span').textContent = 'Taking down...';
+          if (targetType === 'property') {
+            await rejectProperty(targetId);
+          } else {
+            await rejectTakeover(targetId);
+          }
+          await resolveReport(reportId, `${targetType} taken down by admin`);
+          showToast('Content taken down ✅', 'success');
+          renderReports();
+        }
+
+        else if (action === 'ban-owner') {
+          const ownerId = btn.dataset.ownerId;
+          const ownerName = btn.dataset.ownerName;
+          if (!confirm(`Ban ${ownerName}? They will no longer be able to access Rentora.`)) return;
+          btn.disabled = true;
+          btn.querySelector('span').textContent = 'Banning...';
+          await banUser(ownerId);
+          await resolveReport(reportId, `User ${ownerName} banned by admin`);
+          showToast(`${ownerName} has been banned`, 'error');
+          renderReports();
+        }
+
+        else if (action === 'warn-owner') {
+          const ownerId = btn.dataset.ownerId;
+          const ownerName = btn.dataset.ownerName;
+          const warningMsg = prompt(`Warning message for ${ownerName}:`, 'Your listing has been flagged by users for violating our community guidelines. Further violations may result in your account being suspended.');
+          if (!warningMsg) return;
+          btn.disabled = true;
+          btn.querySelector('span').textContent = 'Sending...';
+          await updateUser(ownerId, {
+            warnings: [...(enriched.find(r => r.targetOwner?.id === ownerId)?.targetOwner?.warnings || []), {
+              message: warningMsg,
+              date: new Date().toISOString(),
+              reportId
+            }]
+          });
+          await resolveReport(reportId, `Warning sent to ${ownerName}`);
+          showToast(`Warning sent to ${ownerName}`, 'success');
+          renderReports();
+        }
+
+        else if (action === 'view-target') {
+          const targetId = btn.dataset.targetId;
+          const targetType = btn.dataset.targetType;
+          if (targetType === 'property') navigate(`/property/${targetId}`);
+          else navigate(`/takeover/${targetId}`);
+        }
+
+        else if (action === 'resolve') {
+          if (!confirm('Mark this report as resolved?')) return;
+          await resolveReport(reportId, 'Resolved by admin');
+          showToast('Report resolved ✅', 'success');
+          renderReports();
+        }
+
+        else if (action === 'dismiss') {
+          if (!confirm('Dismiss this report? No action will be taken.')) return;
+          await dismissReport(reportId);
+          showToast('Report dismissed');
+          renderReports();
+        }
+      });
+    });
   }
 
-  function renderUsers() {
+  async function renderUsers() {
+    const freshUsers = (await getUsers()).filter(u => u.role !== 'admin');
     tabContent.innerHTML = '';
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'overflow-x:auto;-webkit-overflow-scrolling:touch';
     const table = document.createElement('table');
     table.className = 'admin-table';
-    table.innerHTML = `<thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Verified</th><th>Actions</th></tr></thead><tbody>${allUsers.map(u => `<tr><td style="font-weight:600">${u.name}</td><td>${u.email}</td><td><span class="status-badge ${u.role === 'landlord' ? 'approved' : 'pending'}">${u.role}</span></td><td>${u.verified ? '✓' : '—'}</td><td>${u.role === 'landlord' && !u.verified ? `<button class="action-btn verify" data-verify="${u.id}">Verify</button>` : ''}${!u.banned ? `<button class="action-btn ban" data-ban="${u.id}">Ban</button>` : '<span style="color:var(--color-danger);font-size:12px">Banned</span>'}</td></tr>`).join('')}</tbody>`;
+    table.innerHTML = `<thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Verified</th><th>Warnings</th><th>Status</th><th>Actions</th></tr></thead><tbody>${freshUsers.map(u => `<tr${u.banned ? ' class="admin-row-banned"' : ''}>
+      <td style="font-weight:600">${u.name}</td>
+      <td>${u.email}</td>
+      <td><span class="status-badge ${u.role === 'landlord' ? 'approved' : 'pending'}">${u.role}</span></td>
+      <td>${u.verified ? '<span style="color:var(--color-success)">✓ Verified</span>' : '—'}</td>
+      <td>${u.warnings?.length ? `<span class="admin-warning-count">${u.warnings.length}</span>` : '—'}</td>
+      <td>${u.banned ? '<span class="status-badge rejected">Banned</span>' : '<span class="status-badge approved">Active</span>'}</td>
+      <td class="admin-user-actions">
+        ${u.role === 'landlord' && !u.verified ? `<button class="action-btn verify" data-verify="${u.id}">Verify</button>` : ''}
+        ${!u.banned ? `<button class="action-btn ban" data-ban="${u.id}" data-name="${u.name}">Ban</button>` : `<button class="action-btn approve" data-unban="${u.id}" data-name="${u.name}">Unban</button>`}
+      </td>
+    </tr>`).join('')}</tbody>`;
     wrapper.appendChild(table);
     tabContent.appendChild(wrapper);
     table.querySelectorAll('[data-verify]').forEach(b => b.addEventListener('click', async () => { await verifyLandlord(b.dataset.verify); showToast('Verified ✅'); renderUsers(); }));
-    table.querySelectorAll('[data-ban]').forEach(b => b.addEventListener('click', async () => { if (confirm('Ban?')) { await banUser(b.dataset.ban); showToast('Banned', 'error'); renderUsers(); } }));
+    table.querySelectorAll('[data-ban]').forEach(b => b.addEventListener('click', async () => { if (confirm(`Ban ${b.dataset.name}? They will lose access to Rentora.`)) { await banUser(b.dataset.ban); showToast(`${b.dataset.name} banned`, 'error'); renderUsers(); } }));
+    table.querySelectorAll('[data-unban]').forEach(b => b.addEventListener('click', async () => { if (confirm(`Unban ${b.dataset.name}?`)) { await updateUser(b.dataset.unban, { banned: false }); showToast(`${b.dataset.name} unbanned ✅`); renderUsers(); } }));
   }
 
   function renderAnalytics() {

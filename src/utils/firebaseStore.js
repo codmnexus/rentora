@@ -140,6 +140,7 @@ export async function createUser({ name, email, phone, password, role, ...extra 
             ...extra,
             verified: role === 'admin',
             emailVerified: false,
+            profileCompleted: false,
             avatar: name.charAt(0).toUpperCase(),
             createdAt: new Date().toISOString()
         };
