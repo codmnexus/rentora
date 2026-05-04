@@ -1,6 +1,7 @@
-import { getCurrentUser, getProperties, getPendingProperties, getUsers, approveProperty, rejectProperty, verifyLandlord, banUser, getAnalytics, getPendingTakeovers, approveTakeover, rejectTakeover, getPendingReports, resolveReport, dismissReport, getPropertyById, getTakeoverById, deleteProperty, getUserById, updateUser } from '../utils/store.js';
+import { getCurrentUser, getProperties, getPendingProperties, getUsers, approveProperty, rejectProperty, verifyLandlord, banUser, getAnalytics, getPendingTakeovers, approveTakeover, rejectTakeover, getReports, resolveReport, dismissReport, getPropertyById, getTakeoverById, deleteProperty, getUserById, updateUser, getTakeovers, updateProperty, updateTakeover, deleteTakeover } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
+import { escapeHTML } from '../utils/authSecurity.js';
 
 export async function createAdminPanel() {
   const user = await getCurrentUser();
@@ -9,7 +10,8 @@ export async function createAdminPanel() {
   const analytics = await getAnalytics();
   const pending = await getPendingProperties();
   const pendingTakeovers = await getPendingTakeovers();
-  const pendingReports = await getPendingReports();
+  const allReports = await getReports();
+  const pendingReports = allReports.filter(r => r.status === 'pending');
   const allUsers = (await getUsers()).filter(u => u.role !== 'admin');
   const formatPrice = (p) => '₦' + p.toLocaleString();
 
@@ -54,9 +56,9 @@ export async function createAdminPanel() {
     </div>
 
     <div class="dashboard-tabs">
-      <div class="dashboard-tab active" data-tab="pending">Listings (${pending.length})</div>
-      <div class="dashboard-tab" data-tab="takeovers">Takeovers (${pendingTakeovers.length})</div>
-      <div class="dashboard-tab" data-tab="reports">Reports (${pendingReports.length})</div>
+      <div class="dashboard-tab active" data-tab="listings">All Listings (${analytics.totalListings})</div>
+      <div class="dashboard-tab" data-tab="takeovers">Takeovers</div>
+      <div class="dashboard-tab" data-tab="reports">Reports (${allReports.length})</div>
       <div class="dashboard-tab" data-tab="users">Users</div>
       <div class="dashboard-tab" data-tab="analytics">Analytics</div>
     </div>
@@ -67,45 +69,337 @@ export async function createAdminPanel() {
   const tabContent = page.querySelector('#tab-content');
   const tabs = page.querySelectorAll('.dashboard-tab');
 
-  async function renderPending() {
-    const items = await getPendingProperties();
-    tabContent.innerHTML = items.length === 0 ? '<div class="no-results"><h3>No pending listings</h3></div>' : '';
-    if (items.length === 0) return;
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'overflow-x:auto;-webkit-overflow-scrolling:touch';
-    const table = document.createElement('table');
-    table.className = 'admin-table';
-    table.innerHTML = `<thead><tr><th>Title</th><th>Landlord</th><th>Area</th><th>Price</th><th>Actions</th></tr></thead><tbody>${items.map(p => `<tr><td style="font-weight:600">${p.title}</td><td>${p.landlordName || 'N/A'}</td><td>${p.area}</td><td>${formatPrice(p.price)}</td><td><button class="action-btn approve" data-approve="${p.id}">Approve</button><button class="action-btn reject" data-reject="${p.id}">Reject</button></td></tr>`).join('')}</tbody>`;
-    wrapper.appendChild(table);
-    tabContent.appendChild(wrapper);
-    table.querySelectorAll('[data-approve]').forEach(b => b.addEventListener('click', async () => { await approveProperty(b.dataset.approve); showToast('Approved ✅'); renderPending(); }));
-    table.querySelectorAll('[data-reject]').forEach(b => b.addEventListener('click', async () => { await rejectProperty(b.dataset.reject); showToast('Rejected', 'error'); renderPending(); }));
+  let listingsFilter = 'all';
+  let listingsSearch = '';
+  let takeoverFilter = 'all';
+
+  async function renderListings() {
+    const allProps = await getProperties();
+    let filtered = [...allProps];
+
+    // Apply filters
+    if (listingsFilter !== 'all') {
+      if (listingsFilter === 'rented') filtered = filtered.filter(p => p.rented);
+      else filtered = filtered.filter(p => p.status === listingsFilter && !p.rented);
+    }
+    if (listingsSearch) {
+      const q = listingsSearch.toLowerCase();
+      filtered = filtered.filter(p =>
+        (p.title || '').toLowerCase().includes(q) ||
+        (p.area || '').toLowerCase().includes(q) ||
+        (p.landlordName || '').toLowerCase().includes(q)
+      );
+    }
+
+    // Sort by newest first
+    filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Count by status
+    const counts = { all: allProps.length, pending: 0, approved: 0, rejected: 0, rented: 0 };
+    allProps.forEach(p => {
+      if (p.rented) counts.rented++;
+      else if (p.status === 'pending') counts.pending++;
+      else if (p.status === 'approved') counts.approved++;
+      else if (p.status === 'rejected') counts.rejected++;
+    });
+
+    tabContent.innerHTML = `
+      <div class="admin-listing-controls">
+        <div class="admin-filter-pills">
+          <button class="admin-filter-pill ${listingsFilter === 'all' ? 'active' : ''}" data-filter="all">All (${counts.all})</button>
+          <button class="admin-filter-pill ${listingsFilter === 'pending' ? 'active' : ''}" data-filter="pending">Pending (${counts.pending})</button>
+          <button class="admin-filter-pill ${listingsFilter === 'approved' ? 'active' : ''}" data-filter="approved">Approved (${counts.approved})</button>
+          <button class="admin-filter-pill ${listingsFilter === 'rejected' ? 'active' : ''}" data-filter="rejected">Rejected (${counts.rejected})</button>
+          <button class="admin-filter-pill ${listingsFilter === 'rented' ? 'active' : ''}" data-filter="rented">Rented (${counts.rented})</button>
+        </div>
+        <div class="admin-search-box">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg>
+          <input type="text" placeholder="Search listings..." value="${listingsSearch}" id="admin-listing-search" />
+        </div>
+      </div>
+
+      ${filtered.length === 0 ? '<div class="no-results"><h3>No listings found</h3><p>Try adjusting your filters</p></div>' : ''}
+
+      <div class="admin-listings-grid">
+        ${filtered.map((p, i) => {
+          const statusClass = p.rented ? 'rented' : p.status;
+          const statusLabel = p.rented ? 'Rented' : p.status;
+          const thumb = p.images?.[0] || '';
+          return `
+          <div class="admin-listing-card" data-listing-idx="${i}">
+            <div class="admin-listing-card-top">
+              <div class="admin-listing-thumb" ${thumb ? `style="background-image:url('${thumb}')"` : ''}>
+                ${!thumb ? '<span>🏠</span>' : ''}
+              </div>
+              <div class="admin-listing-card-body">
+                <div class="admin-listing-title-row">
+                  <h4>${escapeHTML(p.title || 'Untitled')}</h4>
+                  <span class="admin-status-pill ${statusClass}">${statusLabel}</span>
+                </div>
+                <div class="admin-listing-meta-row">
+                  <span>📍 ${escapeHTML(p.area || 'N/A')}</span>
+                  <span>💰 ₦${(p.price || 0).toLocaleString()}</span>
+                  <span>👁 ${p.views || 0} views</span>
+                </div>
+                <div class="admin-listing-meta-row secondary">
+                  <span>👤 ${escapeHTML(p.landlordName || 'Unknown')}</span>
+                  <span>📅 ${new Date(p.createdAt).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  <span>${p.type || ''} ${p.furnished ? '· Furnished' : ''}</span>
+                </div>
+              </div>
+              <button class="admin-listing-expand" data-expand-listing="${i}" title="Details">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 8l4 4 4-4"/></svg>
+              </button>
+            </div>
+
+            <div class="admin-listing-detail" id="listing-detail-${i}" style="display:none">
+              <div class="admin-listing-detail-inner">
+                ${p.description ? `<div class="admin-listing-desc"><strong>Description:</strong> ${escapeHTML(p.description)}</div>` : ''}
+                ${p.amenities?.length ? `<div class="admin-listing-amenities"><strong>Amenities:</strong> ${p.amenities.map(a => `<span class="admin-amenity-tag">${escapeHTML(a)}</span>`).join('')}</div>` : ''}
+                ${p.images?.length > 1 ? `
+                  <div class="admin-listing-images">
+                    ${p.images.slice(0, 5).map(img => `<img src="${img}" alt="listing" class="admin-listing-img" />`).join('')}
+                  </div>
+                ` : ''}
+                <div class="admin-listing-detail-stats">
+                  <div><strong>Type:</strong> ${p.type || 'N/A'}</div>
+                  <div><strong>Furnished:</strong> ${p.furnished ? 'Yes' : 'No'}</div>
+                  <div><strong>Distance:</strong> ${p.distanceFromCampus ? p.distanceFromCampus + ' km' : 'N/A'}</div>
+                  <div><strong>Status:</strong> ${statusLabel}</div>
+                </div>
+              </div>
+              <div class="admin-listing-detail-actions">
+                ${p.status === 'pending' ? `<button class="action-btn approve" data-action-listing="approve" data-id="${p.id}">✅ Approve</button>` : ''}
+                ${p.status === 'pending' ? `<button class="action-btn reject" data-action-listing="reject" data-id="${p.id}">❌ Reject</button>` : ''}
+                ${p.status === 'approved' && !p.rented ? `<button class="action-btn reject" data-action-listing="reject" data-id="${p.id}">⛔ Take Down</button>` : ''}
+                ${p.status === 'rejected' ? `<button class="action-btn approve" data-action-listing="approve" data-id="${p.id}">♻️ Reinstate</button>` : ''}
+                <button class="action-btn ban" data-action-listing="delete" data-id="${p.id}">🗑 Delete</button>
+                <button class="admin-action-btn neutral" data-action-listing="view" data-id="${p.id}" style="padding:8px 16px">
+                  <span>View Page →</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `}).join('')}
+      </div>
+    `;
+
+    // Filter pills
+    tabContent.querySelectorAll('[data-filter]').forEach(btn => {
+      btn.addEventListener('click', () => { listingsFilter = btn.dataset.filter; renderListings(); });
+    });
+
+    // Search
+    const searchInput = tabContent.querySelector('#admin-listing-search');
+    if (searchInput) {
+      let timeout;
+      searchInput.addEventListener('input', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => { listingsSearch = searchInput.value; renderListings(); }, 300);
+      });
+    }
+
+    // Expand/collapse
+    tabContent.querySelectorAll('[data-expand-listing]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = btn.dataset.expandListing;
+        const detail = tabContent.querySelector(`#listing-detail-${idx}`);
+        const card = btn.closest('.admin-listing-card');
+        const isOpen = detail.style.display !== 'none';
+        detail.style.display = isOpen ? 'none' : '';
+        card.classList.toggle('expanded', !isOpen);
+        btn.style.transform = isOpen ? '' : 'rotate(180deg)';
+      });
+    });
+
+    // Actions
+    tabContent.querySelectorAll('[data-action-listing]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.actionListing;
+        const id = btn.dataset.id;
+        if (action === 'approve') {
+          await approveProperty(id);
+          showToast('Listing approved ✅');
+          renderListings();
+        } else if (action === 'reject') {
+          if (!confirm('Reject/take down this listing?')) return;
+          await rejectProperty(id);
+          showToast('Listing rejected');
+          renderListings();
+        } else if (action === 'delete') {
+          if (!confirm('Permanently delete this listing? This cannot be undone.')) return;
+          await deleteProperty(id);
+          showToast('Listing deleted', 'error');
+          renderListings();
+        } else if (action === 'view') {
+          navigate(`/property/${id}`);
+        }
+      });
+    });
   }
 
   async function renderTakeovers() {
-    const items = await getPendingTakeovers();
-    tabContent.innerHTML = items.length === 0 ? '<div class="no-results"><h3>No pending takeovers</h3></div>' : '';
-    if (items.length === 0) return;
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'overflow-x:auto;-webkit-overflow-scrolling:touch';
-    const table = document.createElement('table');
-    table.className = 'admin-table';
-    table.innerHTML = `<thead><tr><th>Title</th><th>Student</th><th>Area</th><th>Rent</th><th>Actions</th></tr></thead><tbody>${items.map(t => `<tr><td style="font-weight:600">${t.title}</td><td>${t.studentName || 'N/A'}</td><td>${t.area}</td><td>${formatPrice(t.rent)}</td><td><button class="action-btn approve" data-tapprove="${t.id}">Approve</button><button class="action-btn reject" data-treject="${t.id}">Reject</button></td></tr>`).join('')}</tbody>`;
-    wrapper.appendChild(table);
-    tabContent.appendChild(wrapper);
-    table.querySelectorAll('[data-tapprove]').forEach(b => b.addEventListener('click', async () => { await approveTakeover(b.dataset.tapprove); showToast('Approved ✅'); renderTakeovers(); }));
-    table.querySelectorAll('[data-treject]').forEach(b => b.addEventListener('click', async () => { await rejectTakeover(b.dataset.treject); showToast('Rejected', 'error'); renderTakeovers(); }));
+    const allTakeovers = await getTakeovers();
+    let filtered = [...allTakeovers];
+
+    if (takeoverFilter !== 'all') {
+      filtered = filtered.filter(t => t.status === takeoverFilter);
+    }
+    filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const counts = { all: allTakeovers.length, pending: 0, approved: 0, rejected: 0 };
+    allTakeovers.forEach(t => {
+      if (t.status === 'pending') counts.pending++;
+      else if (t.status === 'approved') counts.approved++;
+      else if (t.status === 'rejected') counts.rejected++;
+    });
+
+    tabContent.innerHTML = `
+      <div class="admin-listing-controls">
+        <div class="admin-filter-pills">
+          <button class="admin-filter-pill ${takeoverFilter === 'all' ? 'active' : ''}" data-tfilter="all">All (${counts.all})</button>
+          <button class="admin-filter-pill ${takeoverFilter === 'pending' ? 'active' : ''}" data-tfilter="pending">Pending (${counts.pending})</button>
+          <button class="admin-filter-pill ${takeoverFilter === 'approved' ? 'active' : ''}" data-tfilter="approved">Approved (${counts.approved})</button>
+          <button class="admin-filter-pill ${takeoverFilter === 'rejected' ? 'active' : ''}" data-tfilter="rejected">Rejected (${counts.rejected})</button>
+        </div>
+      </div>
+
+      ${filtered.length === 0 ? '<div class="no-results"><h3>No takeovers found</h3><p>Try adjusting your filters</p></div>' : ''}
+
+      <div class="admin-listings-grid">
+        ${filtered.map((t, i) => {
+          const thumb = t.images?.[0] || '';
+          return `
+          <div class="admin-listing-card" data-takeover-idx="${i}">
+            <div class="admin-listing-card-top">
+              <div class="admin-listing-thumb takeover" ${thumb ? `style="background-image:url('${thumb}')"` : ''}>
+                ${!thumb ? '<span>🔄</span>' : ''}
+              </div>
+              <div class="admin-listing-card-body">
+                <div class="admin-listing-title-row">
+                  <h4>${escapeHTML(t.title || 'Untitled Takeover')}</h4>
+                  <span class="admin-status-pill ${t.status}">${t.status}</span>
+                </div>
+                <div class="admin-listing-meta-row">
+                  <span>📍 ${escapeHTML(t.area || 'N/A')}</span>
+                  <span>💰 ₦${(t.rent || 0).toLocaleString()}/mo</span>
+                  <span>📆 ${t.leaseRemaining || '?'} months left</span>
+                </div>
+                <div class="admin-listing-meta-row secondary">
+                  <span>👤 ${escapeHTML(t.studentName || 'Unknown')}</span>
+                  <span>📅 ${new Date(t.createdAt).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+              </div>
+              <button class="admin-listing-expand" data-expand-takeover="${i}" title="Details">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 8l4 4 4-4"/></svg>
+              </button>
+            </div>
+
+            <div class="admin-listing-detail" id="takeover-detail-${i}" style="display:none">
+              <div class="admin-listing-detail-inner">
+                ${t.description ? `<div class="admin-listing-desc"><strong>Description:</strong> ${escapeHTML(t.description)}</div>` : ''}
+                ${t.reason ? `<div class="admin-listing-desc"><strong>Reason for leaving:</strong> ${escapeHTML(t.reason)}</div>` : ''}
+                ${t.images?.length ? `
+                  <div class="admin-listing-images">
+                    ${t.images.slice(0, 5).map(img => `<img src="${img}" alt="takeover" class="admin-listing-img" />`).join('')}
+                  </div>
+                ` : ''}
+              </div>
+              <div class="admin-listing-detail-actions">
+                ${t.status === 'pending' ? `<button class="action-btn approve" data-action-takeover="approve" data-id="${t.id}">✅ Approve</button>` : ''}
+                ${t.status === 'pending' ? `<button class="action-btn reject" data-action-takeover="reject" data-id="${t.id}">❌ Reject</button>` : ''}
+                ${t.status === 'approved' ? `<button class="action-btn reject" data-action-takeover="reject" data-id="${t.id}">⛔ Take Down</button>` : ''}
+                ${t.status === 'rejected' ? `<button class="action-btn approve" data-action-takeover="approve" data-id="${t.id}">♻️ Reinstate</button>` : ''}
+                <button class="action-btn ban" data-action-takeover="delete" data-id="${t.id}">🗑 Delete</button>
+                <button class="admin-action-btn neutral" data-action-takeover="view" data-id="${t.id}" style="padding:8px 16px">
+                  <span>View Page →</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `}).join('')}
+      </div>
+    `;
+
+    // Filter pills
+    tabContent.querySelectorAll('[data-tfilter]').forEach(btn => {
+      btn.addEventListener('click', () => { takeoverFilter = btn.dataset.tfilter; renderTakeovers(); });
+    });
+
+    // Expand/collapse
+    tabContent.querySelectorAll('[data-expand-takeover]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = btn.dataset.expandTakeover;
+        const detail = tabContent.querySelector(`#takeover-detail-${idx}`);
+        const card = btn.closest('.admin-listing-card');
+        const isOpen = detail.style.display !== 'none';
+        detail.style.display = isOpen ? 'none' : '';
+        card.classList.toggle('expanded', !isOpen);
+        btn.style.transform = isOpen ? '' : 'rotate(180deg)';
+      });
+    });
+
+    // Actions
+    tabContent.querySelectorAll('[data-action-takeover]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.actionTakeover;
+        const id = btn.dataset.id;
+        if (action === 'approve') {
+          await approveTakeover(id);
+          showToast('Takeover approved ✅');
+          renderTakeovers();
+        } else if (action === 'reject') {
+          if (!confirm('Reject this takeover?')) return;
+          await rejectTakeover(id);
+          showToast('Takeover rejected');
+          renderTakeovers();
+        } else if (action === 'delete') {
+          if (!confirm('Permanently delete this takeover?')) return;
+          await deleteTakeover(id);
+          showToast('Takeover deleted', 'error');
+          renderTakeovers();
+        } else if (action === 'view') {
+          navigate(`/takeover/${id}`);
+        }
+      });
+    });
   }
 
+  function formatReasonLabel(reason) {
+    const labels = {
+      scam: 'Suspected Scam', fake: 'Fake / Misleading', inappropriate: 'Inappropriate',
+      duplicate: 'Duplicate', unavailable: 'Unavailable', harassment: 'Harassment',
+      spam: 'Spam', discrimination: 'Discrimination', unsafe_property: 'Unsafe Conditions',
+      threatening: 'Threatening', identity_theft: 'Identity Theft',
+      wrong_info: 'Incorrect Info', already_rented: 'Already Rented',
+      wrong_location: 'Wrong Location', other: 'Other'
+    };
+    return labels[reason] || reason;
+  }
+
+  let reportFilter = 'all';
+
   async function renderReports() {
-    const items = await getPendingReports();
-    if (items.length === 0) {
-      tabContent.innerHTML = '<div class="no-results"><h3>No pending reports</h3><p>Users haven\'t reported any issues</p></div>';
+    const allItems = await getReports();
+    const counts = {
+      all: allItems.length,
+      pending: allItems.filter(r => r.status === 'pending').length,
+      resolved: allItems.filter(r => r.status === 'resolved').length,
+      dismissed: allItems.filter(r => r.status === 'dismissed').length
+    };
+    const items = reportFilter === 'all' ? allItems : allItems.filter(r => r.status === reportFilter);
+    const sorted = [...items].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    if (allItems.length === 0) {
+      tabContent.innerHTML = '<div class="no-results"><h3>No reports yet</h3><p>Users haven\'t reported any issues</p></div>';
       return;
     }
 
+    const sevColors = { low: '#22C55E', medium: '#F59E0B', high: '#EF4444', critical: '#DC2626' };
+    const categoryLabels = { safety: '🛡️ Safety', content: '📝 Content', availability: '🏠 Availability', conduct: '👤 Conduct', other: '📋 Other' };
+
     // Enrich reports with target data
-    const enriched = await Promise.all(items.map(async (r) => {
+    const enriched = await Promise.all(sorted.map(async (r) => {
       let target = null;
       let targetOwner = null;
       if (r.targetType === 'property') {
@@ -119,13 +413,30 @@ export async function createAdminPanel() {
     }));
 
     tabContent.innerHTML = `
+      <div class="admin-listing-controls">
+        <div class="admin-filter-pills">
+          <button class="admin-filter-pill ${reportFilter === 'all' ? 'active' : ''}" data-rfilter="all">All (${counts.all})</button>
+          <button class="admin-filter-pill ${reportFilter === 'pending' ? 'active' : ''}" data-rfilter="pending" style="--pill-accent:#F59E0B">⏳ Pending (${counts.pending})</button>
+          <button class="admin-filter-pill ${reportFilter === 'resolved' ? 'active' : ''}" data-rfilter="resolved" style="--pill-accent:#22C55E">✅ Resolved (${counts.resolved})</button>
+          <button class="admin-filter-pill ${reportFilter === 'dismissed' ? 'active' : ''}" data-rfilter="dismissed" style="--pill-accent:#94A3B8">❌ Dismissed (${counts.dismissed})</button>
+        </div>
+      </div>
+
+      ${sorted.length === 0 ? '<div class="no-results"><h3>No reports in this category</h3></div>' : ''}
+
       <div class="admin-reports-list">
-        ${enriched.map((r, i) => `
+        ${enriched.map((r, i) => {
+          const statusClass = r.status === 'resolved' ? 'approved' : r.status === 'dismissed' ? 'rejected' : 'pending';
+          const isPending = r.status === 'pending';
+          return `
           <div class="admin-report-card" data-report-idx="${i}">
             <div class="admin-report-header">
               <div class="admin-report-meta">
                 <span class="admin-report-type-badge ${r.targetType}">${r.targetType === 'property' ? '🏠 Listing' : '🔄 Takeover'}</span>
+                ${r.category ? `<span class="admin-report-reason-badge" style="background:rgba(99,102,241,0.08);color:#6366F1">${categoryLabels[r.category] || r.category}</span>` : ''}
                 <span class="admin-report-reason-badge">${formatReasonLabel(r.reason)}</span>
+                ${r.severity ? `<span class="admin-report-reason-badge" style="background:${sevColors[r.severity]}18;color:${sevColors[r.severity]}">${r.severity}</span>` : ''}
+                <span class="status-badge ${statusClass}">${r.status}</span>
                 <span class="admin-report-date">${new Date(r.createdAt).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
               </div>
               <button class="admin-report-expand" data-expand="${i}" title="Expand">
@@ -139,6 +450,7 @@ export async function createAdminPanel() {
                 <div>
                   <strong>${r.reporterName}</strong> reported ${r.targetType === 'property' ? 'a listing' : 'a takeover'}
                   <div class="admin-report-preview">${r.details || 'No additional details provided'}</div>
+                  ${r.resolution ? `<div style="margin-top:4px;font-size:11px;color:var(--color-success);font-weight:600">📋 ${r.resolution}</div>` : ''}
                 </div>
               </div>
             </div>
@@ -165,54 +477,50 @@ export async function createAdminPanel() {
                 </div>
               ` : '<div class="admin-report-target-missing">⚠️ Reported content no longer exists or could not be loaded</div>'}
 
+              ${isPending ? `
               <div class="admin-report-actions-grid">
                 ${r.target && r.target.status !== 'rejected' ? `
                   <button class="admin-action-btn danger" data-action="takedown" data-report-id="${r.id}" data-target-id="${r.targetId}" data-target-type="${r.targetType}">
                     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                    <span>Take Down</span>
-                    <small>Remove listing from platform</small>
-                  </button>
-                ` : ''}
+                    <span>Take Down</span><small>Remove from platform</small>
+                  </button>` : ''}
                 ${r.targetOwner && !r.targetOwner.banned ? `
                   <button class="admin-action-btn danger-outline" data-action="ban-owner" data-report-id="${r.id}" data-owner-id="${r.targetOwner.id}" data-owner-name="${r.targetOwner.name}">
                     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><path d="M4.93 4.93l10.14 10.14"/></svg>
-                    <span>Ban User</span>
-                    <small>Ban ${r.targetOwner.name}</small>
+                    <span>Ban User</span><small>Ban ${r.targetOwner.name}</small>
                   </button>
-                ` : ''}
-                ${r.targetOwner && !r.targetOwner.banned ? `
                   <button class="admin-action-btn warning" data-action="warn-owner" data-report-id="${r.id}" data-owner-id="${r.targetOwner.id}" data-owner-name="${r.targetOwner.name}">
                     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10 2L1 18h18L10 2zM10 8v4M10 14h.01"/></svg>
-                    <span>Warn User</span>
-                    <small>Send a warning</small>
-                  </button>
-                ` : ''}
+                    <span>Warn User</span><small>Send a warning</small>
+                  </button>` : ''}
                 ${r.target ? `
                   <button class="admin-action-btn neutral" data-action="view-target" data-target-id="${r.targetId}" data-target-type="${r.targetType}">
                     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="3"/><path d="M1 10s4-7 9-7 9 7 9 7-4 7-9 7-9-7-9-7z"/></svg>
-                    <span>View Content</span>
-                    <small>Open reported item</small>
-                  </button>
-                ` : ''}
+                    <span>View Content</span><small>Open reported item</small>
+                  </button>` : ''}
               </div>
-
               <div class="admin-report-resolution">
                 <div class="admin-report-resolution-label">Resolution</div>
                 <div class="admin-report-resolution-actions">
                   <button class="action-btn approve" data-action="resolve" data-report-id="${r.id}">✅ Mark Resolved</button>
                   <button class="action-btn reject" data-action="dismiss" data-report-id="${r.id}">Dismiss Report</button>
                 </div>
-              </div>
+              </div>` : `
+              <div style="padding:12px 0">
+                ${r.target ? `<button class="admin-action-btn neutral" data-action="view-target" data-target-id="${r.targetId}" data-target-type="${r.targetType}" style="display:inline-flex">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="3"/><path d="M1 10s4-7 9-7 9 7 9 7-4 7-9 7-9-7-9-7z"/></svg>
+                  <span>View Content</span></button>` : ''}
+              </div>`}
             </div>
-          </div>
-        `).join('')}
+          </div>`;
+        }).join('')}
       </div>
     `;
 
-    function formatReasonLabel(reason) {
-      const labels = { fake: 'Fake / Misleading', scam: 'Suspected Scam', inappropriate: 'Inappropriate', duplicate: 'Duplicate', unavailable: 'Unavailable', other: 'Other' };
-      return labels[reason] || reason;
-    }
+    // Filter pills
+    tabContent.querySelectorAll('[data-rfilter]').forEach(btn => {
+      btn.addEventListener('click', () => { reportFilter = btn.dataset.rfilter; renderReports(); });
+    });
 
     // Expand/collapse
     tabContent.querySelectorAll('[data-expand]').forEach(btn => {
@@ -503,7 +811,7 @@ export async function createAdminPanel() {
     tab.addEventListener('click', () => {
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      if (tab.dataset.tab === 'pending') renderPending();
+      if (tab.dataset.tab === 'listings') renderListings();
       else if (tab.dataset.tab === 'takeovers') renderTakeovers();
       else if (tab.dataset.tab === 'reports') renderReports();
       else if (tab.dataset.tab === 'users') renderUsers();
@@ -511,6 +819,6 @@ export async function createAdminPanel() {
     });
   });
 
-  renderPending();
+  renderListings();
   return page;
 }

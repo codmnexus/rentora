@@ -464,7 +464,14 @@ export async function getReports() {
 export async function createReport(data) {
   if (USE_FIREBASE) return fb.createReport(data);
   const list = _get(KEYS.REPORTS) || [];
-  const report = { id: _genId(), ...data, status: 'pending', createdAt: new Date().toISOString() };
+  const report = {
+    id: _genId(), ...data,
+    category: data.category || '',
+    severity: data.severity || 'medium',
+    evidenceFileName: data.evidenceFileName || '',
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
   list.push(report);
   _set(KEYS.REPORTS, list);
   return report;
@@ -473,6 +480,12 @@ export async function createReport(data) {
 export async function getPendingReports() {
   if (USE_FIREBASE) return fb.getPendingReports();
   return (_get(KEYS.REPORTS) || []).filter(r => r.status === 'pending');
+}
+
+export async function getReportsByUser(userId) {
+  if (USE_FIREBASE) return fb.getReportsByUser(userId);
+  return (_get(KEYS.REPORTS) || []).filter(r => r.reporterId === userId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 export async function resolveReport(id, resolution) {

@@ -1,4 +1,4 @@
-import { getCurrentUser, getPropertiesByLandlord, getConversations, getPropertyById, deleteProperty, markAsRented, markAsAvailable, getInspectionsByLandlord, approveInspection, rescheduleInspection, getWallet, getUserTransactions, updateUser } from '../utils/store.js';
+import { getCurrentUser, getPropertiesByLandlord, getConversations, getPropertyById, deleteProperty, markAsRented, markAsAvailable, getInspectionsByLandlord, approveInspection, rescheduleInspection, getWallet, getUserTransactions, updateUser, getReportsByUser } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
 import { escapeHTML } from '../utils/authSecurity.js';
@@ -99,6 +99,7 @@ export async function createLandlordDashboard() {
       <div class="dashboard-tab active" data-tab="listings">My Listings</div>
       <div class="dashboard-tab" data-tab="inspections">Inspection Requests (${inspections.filter(i => i.status === 'pending').length})</div>
       <div class="dashboard-tab" data-tab="payments">Payments</div>
+      <div class="dashboard-tab" data-tab="reports">My Reports</div>
     </div>
 
     <div id="tab-content"></div>
@@ -239,12 +240,77 @@ export async function createLandlordDashboard() {
     tabContent.querySelector('#ll-goto-payments')?.addEventListener('click', () => navigate('/payments'));
   }
 
+  async function renderReports() {
+    tabContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--color-gray-400)">Loading reports...</div>';
+    const reports = await getReportsByUser(user.id);
+    tabContent.innerHTML = '';
+    if (reports.length === 0) {
+      tabContent.innerHTML = `
+        <div class="no-results">
+          <h3>No reports submitted</h3>
+          <p>If you encounter issues with listings or users, you can report them from the listing detail page</p>
+        </div>
+      `;
+      return;
+    }
+
+    const reasonLabels = {
+      scam: 'Suspected scam', fake: 'Fake listing', inappropriate: 'Inappropriate content',
+      duplicate: 'Duplicate listing', unavailable: 'No longer available', harassment: 'Harassment',
+      spam: 'Spam', discrimination: 'Discrimination', unsafe_property: 'Unsafe conditions',
+      threatening: 'Threatening behaviour', identity_theft: 'Identity theft',
+      wrong_info: 'Incorrect info', already_rented: 'Already rented', wrong_location: 'Wrong location',
+      other: 'Other'
+    };
+    const categoryLabels = {
+      safety: '🛡️ Safety', content: '📝 Content', availability: '🏠 Availability',
+      conduct: '👤 Conduct', other: '📋 Other'
+    };
+    const sevColors = { low: '#22C55E', medium: '#F59E0B', high: '#EF4444', critical: '#DC2626' };
+
+    const container = document.createElement('div');
+    container.className = 'my-reports-list';
+    container.innerHTML = `
+      <div class="my-reports-header">
+        <h3>Your Reports</h3>
+        <span class="my-reports-count">${reports.length} report${reports.length !== 1 ? 's' : ''}</span>
+      </div>
+      ${reports.map(r => {
+        const date = new Date(r.createdAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+        const statusClass = r.status === 'resolved' ? 'approved' : r.status === 'dismissed' ? 'rejected' : 'pending';
+        return `
+          <div class="my-report-card">
+            <div class="my-report-top">
+              <div class="my-report-meta">
+                ${r.category ? `<span class="my-report-category">${categoryLabels[r.category] || r.category}</span>` : ''}
+                <span class="my-report-type-badge ${r.targetType}">${r.targetType === 'property' ? '🏠 Listing' : '🔄 Takeover'}</span>
+              </div>
+              <span class="status-badge ${statusClass}">${r.status}</span>
+            </div>
+            <div class="my-report-reason">
+              <strong>${reasonLabels[r.reason] || r.reason}</strong>
+              ${r.severity ? `<span class="my-report-severity" style="--sev-color:${sevColors[r.severity] || '#F59E0B'}"><span class="my-report-sev-dot"></span>${r.severity}</span>` : ''}
+            </div>
+            ${r.details ? `<p class="my-report-details">${escapeHTML(r.details).substring(0, 200)}${r.details.length > 200 ? '...' : ''}</p>` : ''}
+            ${r.evidenceFileName ? `<div class="my-report-evidence"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><path d="M14 10v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-3"/><path d="M4 7l4-4 4 4"/><path d="M8 3v9"/></svg> ${escapeHTML(r.evidenceFileName)}</div>` : ''}
+            <div class="my-report-footer">
+              <span class="my-report-date">${date}</span>
+              ${r.status === 'resolved' && r.resolution ? `<span class="my-report-resolution">Resolution: ${escapeHTML(r.resolution)}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    `;
+    tabContent.appendChild(container);
+  }
+
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       if (tab.dataset.tab === 'listings') renderListings();
       else if (tab.dataset.tab === 'payments') renderPaymentsPreview();
+      else if (tab.dataset.tab === 'reports') renderReports();
       else renderInspections();
     });
   });

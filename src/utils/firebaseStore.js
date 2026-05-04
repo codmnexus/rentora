@@ -729,12 +729,15 @@ export async function getReports() {
     return getAllDocs(COL.REPORTS);
 }
 
-export async function createReport({ reporterId, reporterName, targetId, targetType, reason, details }) {
+export async function createReport({ reporterId, reporterName, targetId, targetType, reason, category, severity, details, evidenceFileName }) {
     const report = {
         reporterId, reporterName: sanitizeInput(reporterName),
         targetId, targetType,
         reason: sanitizeInput(reason),
+        category: sanitizeInput(category || ''),
+        severity: sanitizeInput(severity || 'medium'),
         details: sanitizeInput(details || ''),
+        evidenceFileName: sanitizeInput(evidenceFileName || ''),
         status: 'pending',
         createdAt: new Date().toISOString()
     };
@@ -745,6 +748,12 @@ export async function createReport({ reporterId, reporterName, targetId, targetT
 export async function getPendingReports() {
     const all = await getReports();
     return all.filter(r => r.status === 'pending');
+}
+
+export async function getReportsByUser(userId) {
+    const snap = await getDocs(query(collection(db, COL.REPORTS), where('reporterId', '==', userId)));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 export async function resolveReport(id, resolution) {
