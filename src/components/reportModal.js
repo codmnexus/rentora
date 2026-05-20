@@ -2,6 +2,8 @@ import { getCurrentUser, createReport } from '../utils/store.js';
 import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
 import { MAX_LENGTHS } from '../utils/authSecurity.js';
+import { storage } from '../utils/firebase.js';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Report categories with their specific reasons
 const REPORT_CATEGORIES = {
@@ -340,6 +342,16 @@ export async function showReportModal(targetId, targetType = 'property') {
       submitBtn.innerHTML = '<span>Submitting...</span>';
 
       try {
+        // Upload evidence file to Firebase Storage if present
+        let evidenceUrl = '';
+        if (evidenceFile) {
+          submitBtn.innerHTML = '<span>Uploading evidence...</span>';
+          const storagePath = `reports/${Date.now()}_${evidenceFile.name}`;
+          const storageRef = ref(storage, storagePath);
+          await uploadBytes(storageRef, evidenceFile);
+          evidenceUrl = await getDownloadURL(storageRef);
+        }
+
         await createReport({
           reporterId: user.id,
           reporterName: user.name,
@@ -349,7 +361,8 @@ export async function showReportModal(targetId, targetType = 'property') {
           reason: selectedReason,
           severity: selectedSeverity,
           details: detailsText,
-          evidenceFileName: evidenceFile?.name || ''
+          evidenceFileName: evidenceFile?.name || '',
+          evidenceUrl
         });
 
         close();

@@ -729,7 +729,7 @@ export async function getReports() {
     return getAllDocs(COL.REPORTS);
 }
 
-export async function createReport({ reporterId, reporterName, targetId, targetType, reason, category, severity, details, evidenceFileName }) {
+export async function createReport({ reporterId, reporterName, targetId, targetType, reason, category, severity, details, evidenceFileName, evidenceUrl }) {
     const report = {
         reporterId, reporterName: sanitizeInput(reporterName),
         targetId, targetType,
@@ -738,6 +738,7 @@ export async function createReport({ reporterId, reporterName, targetId, targetT
         severity: sanitizeInput(severity || 'medium'),
         details: sanitizeInput(details || ''),
         evidenceFileName: sanitizeInput(evidenceFileName || ''),
+        evidenceUrl: evidenceUrl || '',
         status: 'pending',
         createdAt: new Date().toISOString()
     };

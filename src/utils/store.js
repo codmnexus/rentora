@@ -469,6 +469,7 @@ export async function createReport(data) {
     category: data.category || '',
     severity: data.severity || 'medium',
     evidenceFileName: data.evidenceFileName || '',
+    evidenceUrl: data.evidenceUrl || '',
     status: 'pending',
     createdAt: new Date().toISOString()
   };

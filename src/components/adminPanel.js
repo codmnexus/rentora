@@ -477,6 +477,27 @@ export async function createAdminPanel() {
                 </div>
               ` : '<div class="admin-report-target-missing">⚠️ Reported content no longer exists or could not be loaded</div>'}
 
+              ${r.evidenceUrl ? `
+                <div class="admin-report-evidence-section">
+                  <div class="admin-report-evidence-label">📎 Evidence Attached: <span>${escapeHTML(r.evidenceFileName || 'File')}</span></div>
+                  ${r.evidenceFileName && /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(r.evidenceFileName) ? `
+                    <div class="admin-report-evidence-preview">
+                      <img src="${r.evidenceUrl}" alt="Report evidence" class="admin-report-evidence-img" onclick="window.open('${r.evidenceUrl}', '_blank')" />
+                    </div>
+                  ` : `
+                    <a href="${r.evidenceUrl}" target="_blank" rel="noopener noreferrer" class="admin-report-evidence-link">
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      Download ${escapeHTML(r.evidenceFileName || 'Evidence File')}
+                    </a>
+                  `}
+                </div>
+              ` : r.evidenceFileName ? `
+                <div class="admin-report-evidence-section">
+                  <div class="admin-report-evidence-label">📎 Evidence mentioned: <span>${escapeHTML(r.evidenceFileName)}</span></div>
+                  <div class="admin-report-evidence-nourl">File was submitted before storage was enabled — no preview available</div>
+                </div>
+              ` : ''}
+
               ${isPending ? `
               <div class="admin-report-actions-grid">
                 ${r.target && r.target.status !== 'rejected' ? `

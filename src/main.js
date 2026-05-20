@@ -1,28 +1,34 @@
+// Core styles
 import './index.css';
 import { injectSpeedInsights } from '@vercel/speed-insights';
 import { seedData } from './utils/store.js';
 import { onRouteChange, getCurrentRoute, matchRoute } from './utils/router.js';
-import { createHeader } from './components/header.js';
-import { createSearchBar } from './components/searchBar.js';
-import { createCategoryFilter } from './components/categoryFilter.js';
-import { createPropertyGrid } from './components/propertyGrid.js';
-import { createPropertyDetail } from './components/propertyDetail.js';
-import { createSearchResults } from './components/searchResults.js';
-import { createLoginPage } from './components/loginPage.js';
-import { createTenantDashboard } from './components/tenantDashboard.js';
-import { createLandlordDashboard } from './components/landlordDashboard.js';
-import { createPostProperty } from './components/postProperty.js';
-import { createMessagesPage } from './components/messagesPage.js';
-import { createAdminPanel } from './components/adminPanel.js';
-import { createFooter } from './components/footer.js';
-import { createTakeoverListings } from './components/takeoverListings.js';
-import { createTakeoverDetail } from './components/takeoverDetail.js';
-import { createPostTakeover } from './components/postTakeover.js';
-import { createPaymentPage } from './components/paymentPage.js';
-import { createPaymentsHub } from './components/paymentsHub.js';
+
+// Lazy‑load component factories – each returns a promise resolving to the module
+const loadHeader = () => import('./components/header.js');
+const loadSearchBar = () => import('./components/searchBar.js');
+const loadCategoryFilter = () => import('./components/categoryFilter.js');
+const loadPropertyGrid = () => import('./components/propertyGrid.js');
+const loadPropertyDetail = () => import('./components/propertyDetail.js');
+const loadSearchResults = () => import('./components/searchResults.js');
+const loadLoginPage = () => import('./components/loginPage.js');
+const loadTenantDashboard = () => import('./components/tenantDashboard.js');
+const loadLandlordDashboard = () => import('./components/landlordDashboard.js');
+const loadPostProperty = () => import('./components/postProperty.js');
+const loadMessagesPage = () => import('./components/messagesPage.js');
+const loadAdminPanel = () => import('./components/adminPanel.js');
+const loadFooter = () => import('./components/footer.js');
+const loadTakeoverListings = () => import('./components/takeoverListings.js');
+const loadTakeoverDetail = () => import('./components/takeoverDetail.js');
+const loadPostTakeover = () => import('./components/postTakeover.js');
+const loadPaymentPage = () => import('./components/paymentPage.js');
+const loadPaymentsHub = () => import('./components/paymentsHub.js');
+const loadLandingPage = () => import('./components/landingPage.js');
+const loadInfoPage = () => import('./components/infoPages.js');
+
+// Store helpers (remain eager – small footprint)
 import { getApprovedProperties, getCurrentUser } from './utils/store.js';
-import { createLandingPage } from './components/landingPage.js';
-import { createInfoPage } from './components/infoPages.js';
+
 
 const app = document.getElementById('app');
 
@@ -47,13 +53,13 @@ async function render() {
   const currentUser = await getCurrentUser();
   const isLandingRoute = route.path === '/welcome' || (route.path === '/' && !currentUser);
   if (isLandingRoute) {
-    app.appendChild(createLandingPage());
+    app.appendChild((await (await loadLandingPage()).createLandingPage)());
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
 
   // Header (always present for app routes)
-  app.appendChild(await createHeader());
+  app.appendChild((await (await loadHeader()).createHeader)());
 
   // Route matching
   const propertyMatch = matchRoute('/property/:id', route.path);
@@ -62,86 +68,86 @@ async function render() {
 
   try {
   if (propertyMatch) {
-    app.appendChild(await createPropertyDetail(propertyMatch.id));
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadPropertyDetail()).createPropertyDetail)(propertyMatch.id));
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (takeoverMatch) {
-    app.appendChild(await createTakeoverDetail(takeoverMatch.id));
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadTakeoverDetail()).createTakeoverDetail)(takeoverMatch.id));
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/payments') {
-    app.appendChild(await createPaymentsHub());
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadPaymentsHub()).createPaymentsHub)());
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (paymentMatch) {
-    app.appendChild(await createPaymentPage(paymentMatch.id));
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadPaymentPage()).createPaymentPage)(paymentMatch.id));
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/takeovers') {
-    app.appendChild(await createTakeoverListings());
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadTakeoverListings()).createTakeoverListings)());
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/post-takeover') {
-    app.appendChild(await createPostTakeover());
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadPostTakeover()).createPostTakeover)());
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/search') {
-    app.appendChild(await createSearchResults());
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadSearchResults()).createSearchResults)());
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/login') {
-    app.appendChild(createLoginPage());
+    app.appendChild((await (await loadLoginPage()).createLoginPage)());
 
   } else if (route.path === '/dashboard') {
-    app.appendChild(await createTenantDashboard());
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadTenantDashboard()).createTenantDashboard)());
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/landlord') {
-    app.appendChild(await createLandlordDashboard());
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadLandlordDashboard()).createLandlordDashboard)());
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/post-property') {
-    app.appendChild(await createPostProperty());
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadPostProperty()).createPostProperty)());
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/messages') {
-    app.appendChild(await createMessagesPage());
+    app.appendChild((await (await loadMessagesPage()).createMessagesPage)());
 
   } else if (route.path === '/admin') {
-    app.appendChild(await createAdminPanel());
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadAdminPanel()).createAdminPanel)());
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/about') {
-    app.appendChild(createInfoPage('about'));
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadInfoPage()).createInfoPage)('about'));
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/contact') {
-    app.appendChild(createInfoPage('contact'));
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadInfoPage()).createInfoPage)('contact'));
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/privacy') {
-    app.appendChild(createInfoPage('privacy'));
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadInfoPage()).createInfoPage)('privacy'));
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/terms') {
-    app.appendChild(createInfoPage('terms'));
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadInfoPage()).createInfoPage)('terms'));
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/blog') {
-    app.appendChild(createInfoPage('blog'));
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadInfoPage()).createInfoPage)('blog'));
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/pricing') {
-    app.appendChild(createInfoPage('pricing'));
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadInfoPage()).createInfoPage)('pricing'));
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/verification') {
-    app.appendChild(createInfoPage('verification'));
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadInfoPage()).createInfoPage)('verification'));
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/help') {
-    app.appendChild(createInfoPage('help'));
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadInfoPage()).createInfoPage)('help'));
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else if (route.path === '/home') {
     app.appendChild(createSearchBar());
@@ -169,7 +175,7 @@ async function render() {
     }));
     const homeProps = await getApprovedProperties();
     await renderHomeGrid(homeProps);
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadFooter()).createFooter)());
 
   } else {
     // Home page (default — logged-in users only, landing is handled above)
@@ -198,7 +204,7 @@ async function render() {
     }));
     const defaultProps = await getApprovedProperties();
     await renderHomeGrid(defaultProps);
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadFooter()).createFooter)());
   }
   } catch (routeError) {
     console.error('[Rentora] Route render error:', routeError);
@@ -215,7 +221,7 @@ async function render() {
       </div>
     `;
     app.appendChild(errorEl);
-    app.appendChild(createFooter());
+    app.appendChild((await (await loadFooter()).createFooter)());
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -225,7 +231,7 @@ async function renderHomeGrid(properties) {
   const old = app.querySelector('.main-content');
   if (old) old.remove();
   const footer = app.querySelector('.footer');
-  const grid = await createPropertyGrid(properties);
+  const grid = (await (await loadPropertyGrid()).createPropertyGrid)(properties);
   if (footer) app.insertBefore(grid, footer);
   else app.appendChild(grid);
 }
