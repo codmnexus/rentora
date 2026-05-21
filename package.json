@@ -6,9 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "visualize": "vite build",
+    "optimize-images": "imagemin src/assets/* --out-dir=src/assets/optimized",
+    "perf:test": "lighthouse http://localhost:5173 --output=json --output-path=./lighthouse-report.json --preset=mobile"
   },
   "devDependencies": {
+    "@fullhuman/postcss-purgecss": "^8.0.0",
+    "imagemin-cli": "^8.0.0",
+    "lighthouse": "^13.3.0",
     "postcss-purgecss": "^5.0.0",
     "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "~5.9.3",

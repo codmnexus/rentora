@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import { visualizer } from 'rollup-plugin-visualizer';
-import { purgeCSS } from '@fullhuman/postcss-purgecss';
+import purgeCSS from '@fullhuman/postcss-purgecss';
 import { imagetools } from 'vite-imagetools';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -23,16 +23,8 @@ export default defineConfig({
         background_color: '#000000',
         theme_color: '#6366f1',
         icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
     }),
@@ -40,10 +32,10 @@ export default defineConfig({
   css: {
     postcss: {
       plugins: [
-        purgeCSS({
+        ...(process.env.NODE_ENV === 'production' ? [purgeCSS({
           content: ['./src/**/*.js', './src/**/*.html', './public/**/*.html'],
           defaultExtractor: (content) => content.match(/[A-Za-z0-9-_:/]+/g) || [],
-        }),
+        })] : []),
       ],
     },
   },
@@ -59,3 +51,4 @@ export default defineConfig({
     },
   },
 });
+

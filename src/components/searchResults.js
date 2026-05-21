@@ -95,9 +95,8 @@ export async function createSearchResults() {
 
   // Render cards
   const grid = container.querySelector('#results-grid');
-  for (const p of results) {
-    grid.appendChild(await createPropertyCard(p));
-  }
+  const cards = await Promise.all(results.map(p => createPropertyCard(p)));
+  cards.forEach(card => grid.appendChild(card));
 
   // Apply filters
   container.querySelector('#apply-filters').addEventListener('click', () => {
@@ -124,9 +123,8 @@ export async function createSearchResults() {
   container.querySelector('#search-sort').addEventListener('change', async (e) => {
     const sorted = await searchProperties({ ...filters, sortBy: e.target.value });
     grid.innerHTML = '';
-    for (const p of sorted) {
-      grid.appendChild(await createPropertyCard(p));
-    }
+    const sortedCards = await Promise.all(sorted.map(p => createPropertyCard(p)));
+    sortedCards.forEach(card => grid.appendChild(card));
   });
 
   return container;

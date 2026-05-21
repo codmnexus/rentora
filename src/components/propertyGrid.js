@@ -27,9 +27,8 @@ export async function createPropertyGrid(properties) {
     `;
     const grid = document.createElement('div');
     grid.className = 'property-grid';
-    for (const p of props) {
-      grid.appendChild(await createPropertyCard(p));
-    }
+    const cards = await Promise.all(props.map(p => createPropertyCard(p)));
+    cards.forEach(card => grid.appendChild(card));
     section.appendChild(grid);
     container.appendChild(section);
   }

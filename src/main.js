@@ -30,6 +30,7 @@ const loadInfoPage = () => import('./components/infoPages.js');
 import { getApprovedProperties, getCurrentUser } from './utils/store.js';
 
 
+let currentRenderId = 0;
 const app = document.getElementById('app');
 
 // Show loading state
@@ -43,6 +44,8 @@ function showLoading() {
 }
 
 async function render() {
+  currentRenderId++;
+  const renderId = currentRenderId;
   const route = getCurrentRoute();
   app.innerHTML = '';
   app.classList.remove('page-enter');
@@ -51,15 +54,21 @@ async function render() {
 
   // Landing page routes — skip app header, use landing's own header
   const currentUser = await getCurrentUser();
+  if (renderId !== currentRenderId) return;
   const isLandingRoute = route.path === '/welcome' || (route.path === '/' && !currentUser);
   if (isLandingRoute) {
-    app.appendChild((await (await loadLandingPage()).createLandingPage)());
+    const { createLandingPage } = await loadLandingPage();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createLandingPage());
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
 
   // Header (always present for app routes)
-  app.appendChild((await (await loadHeader()).createHeader)());
+  const { createHeader } = await loadHeader();
+  if (renderId !== currentRenderId) return;
+  app.appendChild(await createHeader());
+  if (renderId !== currentRenderId) return;
 
   // Route matching
   const propertyMatch = matchRoute('/property/:id', route.path);
@@ -68,146 +77,267 @@ async function render() {
 
   try {
   if (propertyMatch) {
-    app.appendChild((await (await loadPropertyDetail()).createPropertyDetail)(propertyMatch.id));
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createPropertyDetail } = await loadPropertyDetail();
+    if (renderId !== currentRenderId) return;
+    const detailEl = await createPropertyDetail(propertyMatch.id);
+    if (renderId !== currentRenderId) return;
+    app.appendChild(detailEl);
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (takeoverMatch) {
-    app.appendChild((await (await loadTakeoverDetail()).createTakeoverDetail)(takeoverMatch.id));
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createTakeoverDetail } = await loadTakeoverDetail();
+    if (renderId !== currentRenderId) return;
+    const detailEl = await createTakeoverDetail(takeoverMatch.id);
+    if (renderId !== currentRenderId) return;
+    app.appendChild(detailEl);
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/payments') {
-    app.appendChild((await (await loadPaymentsHub()).createPaymentsHub)());
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createPaymentsHub } = await loadPaymentsHub();
+    if (renderId !== currentRenderId) return;
+    const el = await createPaymentsHub();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(el);
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (paymentMatch) {
-    app.appendChild((await (await loadPaymentPage()).createPaymentPage)(paymentMatch.id));
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createPaymentPage } = await loadPaymentPage();
+    if (renderId !== currentRenderId) return;
+    const el = await createPaymentPage(paymentMatch.id);
+    if (renderId !== currentRenderId) return;
+    app.appendChild(el);
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/takeovers') {
-    app.appendChild((await (await loadTakeoverListings()).createTakeoverListings)());
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createTakeoverListings } = await loadTakeoverListings();
+    if (renderId !== currentRenderId) return;
+    const el = await createTakeoverListings();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(el);
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/post-takeover') {
-    app.appendChild((await (await loadPostTakeover()).createPostTakeover)());
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createPostTakeover } = await loadPostTakeover();
+    if (renderId !== currentRenderId) return;
+    const el = await createPostTakeover();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(el);
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/search') {
-    app.appendChild((await (await loadSearchResults()).createSearchResults)());
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createSearchResults } = await loadSearchResults();
+    if (renderId !== currentRenderId) return;
+    const el = await createSearchResults();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(el);
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/login') {
-    app.appendChild((await (await loadLoginPage()).createLoginPage)());
+    const { createLoginPage } = await loadLoginPage();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createLoginPage());
 
   } else if (route.path === '/dashboard') {
-    app.appendChild((await (await loadTenantDashboard()).createTenantDashboard)());
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createTenantDashboard } = await loadTenantDashboard();
+    if (renderId !== currentRenderId) return;
+    const el = await createTenantDashboard();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(el);
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/landlord') {
-    app.appendChild((await (await loadLandlordDashboard()).createLandlordDashboard)());
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createLandlordDashboard } = await loadLandlordDashboard();
+    if (renderId !== currentRenderId) return;
+    const el = await createLandlordDashboard();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(el);
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/post-property') {
-    app.appendChild((await (await loadPostProperty()).createPostProperty)());
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createPostProperty } = await loadPostProperty();
+    if (renderId !== currentRenderId) return;
+    const el = await createPostProperty();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(el);
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/messages') {
-    app.appendChild((await (await loadMessagesPage()).createMessagesPage)());
+    const { createMessagesPage } = await loadMessagesPage();
+    if (renderId !== currentRenderId) return;
+    const el = await createMessagesPage();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(el);
 
   } else if (route.path === '/admin') {
-    app.appendChild((await (await loadAdminPanel()).createAdminPanel)());
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createAdminPanel } = await loadAdminPanel();
+    if (renderId !== currentRenderId) return;
+    const el = await createAdminPanel();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(el);
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/about') {
-    app.appendChild((await (await loadInfoPage()).createInfoPage)('about'));
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createInfoPage } = await loadInfoPage();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createInfoPage('about'));
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/contact') {
-    app.appendChild((await (await loadInfoPage()).createInfoPage)('contact'));
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createInfoPage } = await loadInfoPage();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createInfoPage('contact'));
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/privacy') {
-    app.appendChild((await (await loadInfoPage()).createInfoPage)('privacy'));
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createInfoPage } = await loadInfoPage();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createInfoPage('privacy'));
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/terms') {
-    app.appendChild((await (await loadInfoPage()).createInfoPage)('terms'));
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createInfoPage } = await loadInfoPage();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createInfoPage('terms'));
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/blog') {
-    app.appendChild((await (await loadInfoPage()).createInfoPage)('blog'));
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createInfoPage } = await loadInfoPage();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createInfoPage('blog'));
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/pricing') {
-    app.appendChild((await (await loadInfoPage()).createInfoPage)('pricing'));
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createInfoPage } = await loadInfoPage();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createInfoPage('pricing'));
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/verification') {
-    app.appendChild((await (await loadInfoPage()).createInfoPage)('verification'));
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createInfoPage } = await loadInfoPage();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createInfoPage('verification'));
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/help') {
-    app.appendChild((await (await loadInfoPage()).createInfoPage)('help'));
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createInfoPage } = await loadInfoPage();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createInfoPage('help'));
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else if (route.path === '/home') {
+    const { createSearchBar } = await loadSearchBar();
+    const { createCategoryFilter } = await loadCategoryFilter();
+    if (renderId !== currentRenderId) return;
     app.appendChild(createSearchBar());
     app.appendChild(createCategoryFilter(async (categoryId) => {
       const allProps = await getApprovedProperties();
+      if (renderId !== currentRenderId) return;
       if (categoryId === 'all') {
-        await renderHomeGrid(allProps);
+        await renderHomeGrid(allProps, renderId);
       } else if (categoryId === 'near-campus') {
-        await renderHomeGrid(allProps.filter(p => p.distanceFromCampus <= 1));
+        await renderHomeGrid(allProps.filter(p => p.distanceFromCampus <= 1), renderId);
       } else if (categoryId === 'verified') {
-        await renderHomeGrid(allProps.filter(p => p.verified));
+        await renderHomeGrid(allProps.filter(p => p.verified), renderId);
       } else if (categoryId === 'budget') {
-        await renderHomeGrid(allProps.filter(p => p.price <= 100000));
+        await renderHomeGrid(allProps.filter(p => p.price <= 100000), renderId);
       } else if (categoryId === 'furnished') {
-        await renderHomeGrid(allProps.filter(p => p.furnished));
+        await renderHomeGrid(allProps.filter(p => p.furnished), renderId);
       } else {
         const typeMap = {
           'self-con': 'Self-con', 'single-room': 'Single room', 'flat': 'Flat',
           'shared-room': 'Shared room', 'studio': 'Studio'
         };
         const type = typeMap[categoryId];
-        if (type) await renderHomeGrid(allProps.filter(p => p.type === type));
-        else await renderHomeGrid(allProps);
+        if (type) await renderHomeGrid(allProps.filter(p => p.type === type), renderId);
+        else await renderHomeGrid(allProps, renderId);
       }
     }));
     const homeProps = await getApprovedProperties();
-    await renderHomeGrid(homeProps);
-    app.appendChild((await (await loadFooter()).createFooter)());
+    if (renderId !== currentRenderId) return;
+    await renderHomeGrid(homeProps, renderId);
+    if (renderId !== currentRenderId) return;
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
 
   } else {
     // Home page (default — logged-in users only, landing is handled above)
+    const { createSearchBar } = await loadSearchBar();
+    const { createCategoryFilter } = await loadCategoryFilter();
+    if (renderId !== currentRenderId) return;
     app.appendChild(createSearchBar());
     app.appendChild(createCategoryFilter(async (categoryId) => {
       const allProps = await getApprovedProperties();
+      if (renderId !== currentRenderId) return;
       if (categoryId === 'all') {
-        await renderHomeGrid(allProps);
+        await renderHomeGrid(allProps, renderId);
       } else if (categoryId === 'near-campus') {
-        await renderHomeGrid(allProps.filter(p => p.distanceFromCampus <= 1));
+        await renderHomeGrid(allProps.filter(p => p.distanceFromCampus <= 1), renderId);
       } else if (categoryId === 'verified') {
-        await renderHomeGrid(allProps.filter(p => p.verified));
+        await renderHomeGrid(allProps.filter(p => p.verified), renderId);
       } else if (categoryId === 'budget') {
-        await renderHomeGrid(allProps.filter(p => p.price <= 100000));
+        await renderHomeGrid(allProps.filter(p => p.price <= 100000), renderId);
       } else if (categoryId === 'furnished') {
-        await renderHomeGrid(allProps.filter(p => p.furnished));
+        await renderHomeGrid(allProps.filter(p => p.furnished), renderId);
       } else {
         const typeMap = {
           'self-con': 'Self-con', 'single-room': 'Single room', 'flat': 'Flat',
           'shared-room': 'Shared room', 'studio': 'Studio'
         };
         const type = typeMap[categoryId];
-        if (type) await renderHomeGrid(allProps.filter(p => p.type === type));
-        else await renderHomeGrid(allProps);
+        if (type) await renderHomeGrid(allProps.filter(p => p.type === type), renderId);
+        else await renderHomeGrid(allProps, renderId);
       }
     }));
     const defaultProps = await getApprovedProperties();
-    await renderHomeGrid(defaultProps);
-    app.appendChild((await (await loadFooter()).createFooter)());
+    if (renderId !== currentRenderId) return;
+    await renderHomeGrid(defaultProps, renderId);
+    if (renderId !== currentRenderId) return;
+    const { createFooter } = await loadFooter();
+    if (renderId !== currentRenderId) return;
+    app.appendChild(createFooter());
   }
   } catch (routeError) {
     console.error('[Rentora] Route render error:', routeError);
+    if (renderId !== currentRenderId) return;
     const errorEl = document.createElement('div');
     errorEl.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px 20px">
@@ -221,17 +351,22 @@ async function render() {
       </div>
     `;
     app.appendChild(errorEl);
-    app.appendChild((await (await loadFooter()).createFooter)());
+    const { createFooter } = await loadFooter();
+    app.appendChild(createFooter());
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-async function renderHomeGrid(properties) {
+async function renderHomeGrid(properties, renderId) {
+  if (renderId !== undefined && renderId !== currentRenderId) return;
   const old = app.querySelector('.main-content');
   if (old) old.remove();
   const footer = app.querySelector('.footer');
-  const grid = (await (await loadPropertyGrid()).createPropertyGrid)(properties);
+  const { createPropertyGrid } = await loadPropertyGrid();
+  if (renderId !== undefined && renderId !== currentRenderId) return;
+  const grid = await createPropertyGrid(properties);
+  if (renderId !== undefined && renderId !== currentRenderId) return;
   if (footer) app.insertBefore(grid, footer);
   else app.appendChild(grid);
 }

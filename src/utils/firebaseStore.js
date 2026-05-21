@@ -32,9 +32,10 @@ const COL = {
     NOTIFICATIONS: 'notifications'
 };
 
-// ---- Cached current user ----
+// ---- Cached current user & saved listings cache ----
 let _currentUser = null;
 let _currentUserDoc = null;
+let _savedPropertyIdsCache = null;
 let _authReady = false;
 let _authReadyResolve;
 const _authReadyPromise = new Promise(resolve => { _authReadyResolve = resolve; });
@@ -196,6 +197,7 @@ export async function loginUser(email, password) {
         const user = { id: snap.id, ...userData, emailVerified: cred.user.emailVerified };
         _currentUser = cred.user;
         _currentUserDoc = user;
+        _savedPropertyIdsCache = null;
 
         // Start session timeout (auto-logout after 30 min idle)
         startSessionTimer(async () => {
@@ -227,6 +229,7 @@ export async function logoutUser() {
     await signOut(auth);
     _currentUser = null;
     _currentUserDoc = null;
+    _savedPropertyIdsCache = null;
 }
 
 // ---- Password Reset ----
@@ -323,13 +326,29 @@ export async function getPropertiesByLandlord(landlordId) {
 }
 
 export async function getApprovedProperties() {
-    const all = await getProperties();
-    return all.filter(p => p.status === 'approved' && !p.rented);
+    try {
+        const snap = await getDocs(query(
+            collection(db, COL.PROPERTIES),
+            where('status', '==', 'approved')
+        ));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => !p.rented);
+    } catch (err) {
+        console.error('[Rentora] Failed to fetch approved properties:', err.message);
+        return [];
+    }
 }
 
 export async function getPendingProperties() {
-    const all = await getProperties();
-    return all.filter(p => p.status === 'pending');
+    try {
+        const snap = await getDocs(query(
+            collection(db, COL.PROPERTIES),
+            where('status', '==', 'pending')
+        ));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+        console.error('[Rentora] Failed to fetch pending properties:', err.message);
+        return [];
+    }
 }
 
 export async function searchProperties(filters = {}) {
@@ -406,13 +425,29 @@ export async function approveTakeover(id) { return updateTakeover(id, { status: 
 export async function rejectTakeover(id) { return updateTakeover(id, { status: 'rejected' }); }
 
 export async function getApprovedTakeovers() {
-    const all = await getTakeovers();
-    return all.filter(t => t.status === 'approved');
+    try {
+        const snap = await getDocs(query(
+            collection(db, COL.TAKEOVERS),
+            where('status', '==', 'approved')
+        ));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+        console.error('[Rentora] Failed to fetch approved takeovers:', err.message);
+        return [];
+    }
 }
 
 export async function getPendingTakeovers() {
-    const all = await getTakeovers();
-    return all.filter(t => t.status === 'pending');
+    try {
+        const snap = await getDocs(query(
+            collection(db, COL.TAKEOVERS),
+            where('status', '==', 'pending')
+        ));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+        console.error('[Rentora] Failed to fetch pending takeovers:', err.message);
+        return [];
+    }
 }
 
 export async function getTakeoversByStudent(studentId) {
@@ -615,40 +650,59 @@ export function onConversations(userId, callback) {
 
 // ---- Saved Listings ----
 export async function getSavedListings(userId) {
-    const snap = await getDocs(query(collection(db, COL.SAVED), where('userId', '==', userId)));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    try {
+        const snap = await getDocs(query(collection(db, COL.SAVED), where('userId', '==', userId)));
+        const saved = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _savedPropertyIdsCache = new Set(saved.map(s => s.propertyId));
+        return saved;
+    } catch (err) {
+        console.error('[Rentora] Failed to fetch saved listings:', err.message);
+        return [];
+    }
 }
 
 export async function saveListing(userId, propertyId) {
-    const existing = await getDocs(query(
-        collection(db, COL.SAVED),
-        where('userId', '==', userId),
-        where('propertyId', '==', propertyId)
-    ));
-    if (!existing.empty) return;
-    await addDoc(collection(db, COL.SAVED), { userId, propertyId });
-    const p = await getPropertyById(propertyId);
-    if (p) await updateProperty(propertyId, { savedBy: (p.savedBy || 0) + 1 });
+    try {
+        const existing = await getDocs(query(
+            collection(db, COL.SAVED),
+            where('userId', '==', userId),
+            where('propertyId', '==', propertyId)
+        ));
+        if (!existing.empty) return;
+        await addDoc(collection(db, COL.SAVED), { userId, propertyId });
+        if (_savedPropertyIdsCache) {
+            _savedPropertyIdsCache.add(propertyId);
+        }
+        const p = await getPropertyById(propertyId);
+        if (p) await updateProperty(propertyId, { savedBy: (p.savedBy || 0) + 1 });
+    } catch (err) {
+        console.error('[Rentora] Failed to save listing:', err.message);
+    }
 }
 
 export async function removeSavedListing(userId, propertyId) {
-    const snap = await getDocs(query(
-        collection(db, COL.SAVED),
-        where('userId', '==', userId),
-        where('propertyId', '==', propertyId)
-    ));
-    const batch = [];
-    snap.docs.forEach(d => batch.push(deleteDoc(d.ref)));
-    await Promise.all(batch);
+    try {
+        const snap = await getDocs(query(
+            collection(db, COL.SAVED),
+            where('userId', '==', userId),
+            where('propertyId', '==', propertyId)
+        ));
+        const batch = [];
+        snap.docs.forEach(d => batch.push(deleteDoc(d.ref)));
+        await Promise.all(batch);
+        if (_savedPropertyIdsCache) {
+            _savedPropertyIdsCache.delete(propertyId);
+        }
+    } catch (err) {
+        console.error('[Rentora] Failed to remove saved listing:', err.message);
+    }
 }
 
 export async function isListingSaved(userId, propertyId) {
-    const snap = await getDocs(query(
-        collection(db, COL.SAVED),
-        where('userId', '==', userId),
-        where('propertyId', '==', propertyId)
-    ));
-    return !snap.empty;
+    if (!_savedPropertyIdsCache) {
+        await getSavedListings(userId);
+    }
+    return _savedPropertyIdsCache ? _savedPropertyIdsCache.has(propertyId) : false;
 }
 
 // ---- Inspections ----
@@ -747,8 +801,16 @@ export async function createReport({ reporterId, reporterName, targetId, targetT
 }
 
 export async function getPendingReports() {
-    const all = await getReports();
-    return all.filter(r => r.status === 'pending');
+    try {
+        const snap = await getDocs(query(
+            collection(db, COL.REPORTS),
+            where('status', '==', 'pending')
+        ));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+        console.error('[Rentora] Failed to fetch pending reports:', err.message);
+        return [];
+    }
 }
 
 export async function getReportsByUser(userId) {

@@ -128,9 +128,8 @@ export async function createTenantDashboard() {
     }
     const grid = document.createElement('div');
     grid.className = 'property-grid';
-    for (const p of savedProperties) {
-      grid.appendChild(await createPropertyCard(p));
-    }
+    const cards = await Promise.all(savedProperties.map(p => createPropertyCard(p)));
+    cards.forEach(card => grid.appendChild(card));
     tabContent.appendChild(grid);
   }
 
