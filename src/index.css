@@ -15108,12 +15108,18 @@ textarea {
 @media (max-width: 900px) {
   .auth-split-page {
     flex-direction: column;
+    padding: var(--space-4);
+    min-height: calc(100vh - var(--header-height));
   }
 
   .auth-brand-panel {
     flex: none;
+    width: 100%;
+    max-width: 480px;
+    min-height: 260px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     padding: var(--space-8) var(--space-6);
-    min-height: auto;
+    box-sizing: border-box;
   }
 
   .auth-brand-title {
@@ -15133,6 +15139,12 @@ textarea {
   }
 
   .auth-form-panel {
+    width: 100%;
+    max-width: 480px;
+    min-height: auto;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    box-sizing: border-box;
     padding: var(--space-8) var(--space-6);
   }
 }
@@ -15140,6 +15152,7 @@ textarea {
 @media (max-width: 600px) {
   .auth-brand-panel {
     padding: var(--space-6) var(--space-5);
+    min-height: 240px;
   }
 
   .auth-brand-title {
