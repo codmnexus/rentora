@@ -5,6 +5,7 @@ import { showReportModal } from './reportModal.js';
 import { createReviewSection } from './reviewSection.js';
 import { escapeHTML } from '../utils/authSecurity.js';
 import { showInspectionModal } from './inspectionBooking.js';
+import { showLightbox } from './lightbox.js';
 
 export async function createPropertyDetail(propertyId) {
   const property = await getPropertyById(propertyId);
@@ -92,6 +93,32 @@ export async function createPropertyDetail(propertyId) {
             `).join('')}
           </div>
         </div>
+
+        <!-- Verified Video Proof -->
+        ${property.videos && property.videos.length > 0 ? `
+        <div class="detail-section">
+          <div class="detail-section-header" style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <h2 class="detail-section-title" style="margin:0">Verified Video Proof</h2>
+            <span class="landlord-verified" style="background:rgba(34,197,94,0.08);color:var(--color-success);padding:2px 8px;border-radius:var(--radius-pill);font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><path d="M2 6l3 3 5-5"/></svg>
+              Anti-Fraud Checked
+            </span>
+          </div>
+          <p style="font-size:13px;color:var(--color-gray-500);margin-bottom:16px">
+            Landlords recorded these physical walkthrough clips to verify that the ticked offers/amenities exist and are in functional order.
+          </p>
+          <div class="detail-videos-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:16px">
+            ${property.videos.map(v => `
+              <div class="detail-video-card" style="background:var(--color-gray-50);border:1px solid var(--color-gray-100);border-radius:var(--radius-md);padding:12px;display:flex;flex-direction:column;gap:8px">
+                <div style="font-size:13px;font-weight:600;color:var(--color-gray-800);display:flex;align-items:center;gap:4px">
+                  <span style="font-size:14px">🎥</span> ${escapeHTML(v.label)}
+                </div>
+                <video src="${v.src}" controls style="width:100%;border-radius:var(--radius-sm);max-height:160px;background:var(--color-black)"></video>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
 
         <!-- Contact (In-App Only) -->
         <div class="detail-section">
@@ -187,6 +214,16 @@ export async function createPropertyDetail(propertyId) {
 
   // Back
   detail.querySelector('#detail-back').addEventListener('click', () => window.history.back());
+
+  // Lightbox Integration
+  const galleryImgs = detail.querySelectorAll('.detail-gallery img');
+  galleryImgs.forEach((imgEl, idx) => {
+    imgEl.style.cursor = 'zoom-in';
+    imgEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showLightbox(property.images || [], idx);
+    });
+  });
 
   // Message (in-app only)
   const msgHandler = () => {

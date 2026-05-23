@@ -3,6 +3,7 @@ import { navigate } from '../utils/router.js';
 import { showToast } from './header.js';
 import { showReportModal } from './reportModal.js';
 import { escapeHTML } from '../utils/authSecurity.js';
+import { showLightbox } from './lightbox.js';
 
 export async function createTakeoverDetail(takeoverId) {
   const takeover = await getTakeoverById(takeoverId);
@@ -190,6 +191,16 @@ export async function createTakeoverDetail(takeoverId) {
 
   // Event handlers
   detail.querySelector('#back-btn').addEventListener('click', () => navigate('/takeovers'));
+
+  // Lightbox Integration
+  const galleryImgs = detail.querySelectorAll('.detail-gallery img');
+  galleryImgs.forEach((imgEl, idx) => {
+    imgEl.style.cursor = 'zoom-in';
+    imgEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showLightbox(takeover.images || [], idx);
+    });
+  });
 
   const msgHandler = () => {
     if (!user) { navigate('/login'); return; }

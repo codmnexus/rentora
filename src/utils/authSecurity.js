@@ -33,6 +33,8 @@ export const MAX_LENGTHS = {
   maxFileSize: 5 * 1024 * 1024, // 5MB
   maxFiles: 10,
   allowedImageTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  maxVideoSize: 15 * 1024 * 1024, // 15MB
+  allowedVideoTypes: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
 };
 
 // ---- Password Strength Validation ----
