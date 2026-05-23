@@ -28,6 +28,7 @@ const loadInfoPage = () => import('./components/infoPages.js');
 
 // Store helpers (remain eager – small footprint)
 import { getApprovedProperties, getCurrentUser } from './utils/store.js';
+import { getSkeletonCardHTML, getHomeSkeleton, getSearchSkeleton, getDetailSkeleton, getDashboardSkeleton, getMessagesSkeleton, getGeneralSkeleton } from './components/skeletonLoader.js';
 
 
 let currentRenderId = 0;
@@ -75,12 +76,53 @@ async function render() {
   const takeoverMatch = matchRoute('/takeover/:id', route.path);
   const paymentMatch = matchRoute('/payment/:id', route.path);
 
+  // Inject route-specific skeleton loaders instantly to prevent blank layout shifts
+  const skeletonContainer = document.createElement('div');
+  skeletonContainer.id = 'route-skeleton-loader';
+  
+  if (propertyMatch || takeoverMatch) {
+    skeletonContainer.innerHTML = getDetailSkeleton();
+  } else if (route.path === '/search' || route.path === '/takeovers') {
+    skeletonContainer.innerHTML = getSearchSkeleton();
+  } else if (route.path === '/dashboard' || route.path === '/landlord' || route.path === '/payments') {
+    skeletonContainer.innerHTML = getDashboardSkeleton();
+  } else if (route.path === '/messages') {
+    skeletonContainer.innerHTML = getMessagesSkeleton();
+  } else if (route.path === '/home' || route.path === '/') {
+    skeletonContainer.innerHTML = getHomeSkeleton();
+  } else if (
+    route.path !== '/login' && 
+    route.path !== '/welcome' && 
+    route.path !== '/post-property' && 
+    route.path !== '/post-takeover' &&
+    route.path !== '/about' &&
+    route.path !== '/contact' &&
+    route.path !== '/privacy' &&
+    route.path !== '/terms' &&
+    route.path !== '/blog' &&
+    route.path !== '/pricing' &&
+    route.path !== '/verification' &&
+    route.path !== '/help'
+  ) {
+    skeletonContainer.innerHTML = getGeneralSkeleton();
+  }
+
+  if (skeletonContainer.innerHTML) {
+    app.appendChild(skeletonContainer);
+  }
+
+  const removeSkeleton = () => {
+    const el = app.querySelector('#route-skeleton-loader');
+    if (el) el.remove();
+  };
+
   try {
   if (propertyMatch) {
     const { createPropertyDetail } = await loadPropertyDetail();
     if (renderId !== currentRenderId) return;
     const detailEl = await createPropertyDetail(propertyMatch.id);
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(detailEl);
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -91,6 +133,7 @@ async function render() {
     if (renderId !== currentRenderId) return;
     const detailEl = await createTakeoverDetail(takeoverMatch.id);
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(detailEl);
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -101,6 +144,7 @@ async function render() {
     if (renderId !== currentRenderId) return;
     const el = await createPaymentsHub();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(el);
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -111,6 +155,7 @@ async function render() {
     if (renderId !== currentRenderId) return;
     const el = await createPaymentPage(paymentMatch.id);
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(el);
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -121,6 +166,7 @@ async function render() {
     if (renderId !== currentRenderId) return;
     const el = await createTakeoverListings();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(el);
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -131,6 +177,7 @@ async function render() {
     if (renderId !== currentRenderId) return;
     const el = await createPostTakeover();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(el);
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -141,6 +188,7 @@ async function render() {
     if (renderId !== currentRenderId) return;
     const el = await createSearchResults();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(el);
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -149,6 +197,7 @@ async function render() {
   } else if (route.path === '/login') {
     const { createLoginPage } = await loadLoginPage();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(createLoginPage());
 
   } else if (route.path === '/dashboard') {
@@ -156,6 +205,7 @@ async function render() {
     if (renderId !== currentRenderId) return;
     const el = await createTenantDashboard();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(el);
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -166,6 +216,7 @@ async function render() {
     if (renderId !== currentRenderId) return;
     const el = await createLandlordDashboard();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(el);
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -176,6 +227,7 @@ async function render() {
     if (renderId !== currentRenderId) return;
     const el = await createPostProperty();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(el);
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -186,6 +238,7 @@ async function render() {
     if (renderId !== currentRenderId) return;
     const el = await createMessagesPage();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(el);
 
   } else if (route.path === '/admin') {
@@ -193,6 +246,7 @@ async function render() {
     if (renderId !== currentRenderId) return;
     const el = await createAdminPanel();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(el);
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -201,6 +255,7 @@ async function render() {
   } else if (route.path === '/about') {
     const { createInfoPage } = await loadInfoPage();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(createInfoPage('about'));
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -209,6 +264,7 @@ async function render() {
   } else if (route.path === '/contact') {
     const { createInfoPage } = await loadInfoPage();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(createInfoPage('contact'));
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -217,6 +273,7 @@ async function render() {
   } else if (route.path === '/privacy') {
     const { createInfoPage } = await loadInfoPage();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(createInfoPage('privacy'));
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -225,6 +282,7 @@ async function render() {
   } else if (route.path === '/terms') {
     const { createInfoPage } = await loadInfoPage();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(createInfoPage('terms'));
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -233,6 +291,7 @@ async function render() {
   } else if (route.path === '/blog') {
     const { createInfoPage } = await loadInfoPage();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(createInfoPage('blog'));
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -241,6 +300,7 @@ async function render() {
   } else if (route.path === '/pricing') {
     const { createInfoPage } = await loadInfoPage();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(createInfoPage('pricing'));
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -249,6 +309,7 @@ async function render() {
   } else if (route.path === '/verification') {
     const { createInfoPage } = await loadInfoPage();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(createInfoPage('verification'));
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -257,6 +318,7 @@ async function render() {
   } else if (route.path === '/help') {
     const { createInfoPage } = await loadInfoPage();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(createInfoPage('help'));
     const { createFooter } = await loadFooter();
     if (renderId !== currentRenderId) return;
@@ -266,6 +328,7 @@ async function render() {
     const { createSearchBar } = await loadSearchBar();
     const { createCategoryFilter } = await loadCategoryFilter();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(createSearchBar());
     app.appendChild(createCategoryFilter(async (categoryId) => {
       const allProps = await getApprovedProperties();
@@ -303,6 +366,7 @@ async function render() {
     const { createSearchBar } = await loadSearchBar();
     const { createCategoryFilter } = await loadCategoryFilter();
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     app.appendChild(createSearchBar());
     app.appendChild(createCategoryFilter(async (categoryId) => {
       const allProps = await getApprovedProperties();
@@ -338,6 +402,7 @@ async function render() {
   } catch (routeError) {
     console.error('[Rentora] Route render error:', routeError);
     if (renderId !== currentRenderId) return;
+    removeSkeleton();
     const errorEl = document.createElement('div');
     errorEl.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px 20px">
@@ -361,12 +426,43 @@ async function render() {
 async function renderHomeGrid(properties, renderId) {
   if (renderId !== undefined && renderId !== currentRenderId) return;
   const old = app.querySelector('.main-content');
-  if (old) old.remove();
   const footer = app.querySelector('.footer');
+  
+  // Show temporary grid skeletons during load to keep UI responsive
+  let tempGrid = app.querySelector('#temp-listing-skeleton-grid');
+  if (!tempGrid) {
+    tempGrid = document.createElement('div');
+    tempGrid.id = 'temp-listing-skeleton-grid';
+    tempGrid.className = 'main-content';
+    tempGrid.innerHTML = `
+      <div style="max-width: 1200px; margin: 0 auto; padding: 0 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div class="skeleton" style="height: 24px; width: 180px; border-radius: var(--radius-sm);"></div>
+        </div>
+        <div class="property-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
+          ${Array(3).fill(0).map(() => getSkeletonCardHTML()).join('')}
+        </div>
+      </div>
+    `;
+    if (old) {
+      old.replaceWith(tempGrid);
+    } else if (footer) {
+      app.insertBefore(tempGrid, footer);
+    } else {
+      app.appendChild(tempGrid);
+    }
+  }
+
   const { createPropertyGrid } = await loadPropertyGrid();
   if (renderId !== undefined && renderId !== currentRenderId) return;
   const grid = await createPropertyGrid(properties);
   if (renderId !== undefined && renderId !== currentRenderId) return;
+  
+  // Clean up skeleton and mount real grid
+  if (tempGrid) tempGrid.remove();
+  const freshOld = app.querySelector('.main-content');
+  if (freshOld) freshOld.remove();
+  
   if (footer) app.insertBefore(grid, footer);
   else app.appendChild(grid);
 }

@@ -213,7 +213,20 @@ export async function createMessagesPage() {
 
           <!-- Messages (real-time) -->
           <div class="msg-chat-messages" id="msg-chat-messages">
-            <div class="msg-loading">Loading messages...</div>
+            <div class="msg-loading" style="display:flex;flex-direction:column;gap:16px;padding:8px 0;">
+              <div style="align-self: flex-start; display: flex; gap: 8px; width: 60%;">
+                <div class="skeleton" style="height: 38px; width: 80%; border-radius: 18px 18px 18px 2px;"></div>
+              </div>
+              <div style="align-self: flex-end; width: 50%;">
+                <div class="skeleton" style="height: 38px; width: 100%; border-radius: 18px 18px 2px 18px;"></div>
+              </div>
+              <div style="align-self: flex-start; display: flex; gap: 8px; width: 70%;">
+                <div class="skeleton" style="height: 52px; width: 90%; border-radius: 18px 18px 18px 2px;"></div>
+              </div>
+              <div style="align-self: flex-end; width: 45%;">
+                <div class="skeleton" style="height: 38px; width: 100%; border-radius: 18px 18px 2px 18px;"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

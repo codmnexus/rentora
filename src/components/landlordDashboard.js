@@ -180,7 +180,15 @@ export async function createLandlordDashboard() {
   }
 
   async function renderPaymentsPreview() {
-    tabContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--color-gray-400)">Loading...</div>';
+    tabContent.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:24px;">
+        <div class="skeleton" style="height: 120px; width: 100%; border-radius: var(--radius-xl);"></div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="skeleton" style="height: 20px; width: 150px; border-radius: var(--radius-sm);"></div>
+          ${Array(3).fill(0).map(() => `<div class="skeleton" style="height: 60px; width: 100%; border-radius: var(--radius-lg);"></div>`).join('')}
+        </div>
+      </div>
+    `;
     const freshWallet = await getWallet();
     const transactions = await getUserTransactions(user.id);
     const recent = transactions.slice(0, 5);
@@ -241,7 +249,24 @@ export async function createLandlordDashboard() {
   }
 
   async function renderReports() {
-    tabContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--color-gray-400)">Loading reports...</div>';
+    tabContent.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div class="skeleton" style="height: 22px; width: 130px; border-radius: var(--radius-sm);"></div>
+          <div class="skeleton" style="height: 16px; width: 60px; border-radius: var(--radius-sm);"></div>
+        </div>
+        ${Array(2).fill(0).map(() => `
+          <div style="background:var(--bg-surface);padding:20px;border-radius:var(--radius-lg);display:flex;flex-direction:column;gap:12px;border:1px solid var(--color-gray-100);">
+            <div style="display:flex;justify-content:space-between;">
+              <div class="skeleton" style="height:18px;width:120px;border-radius:var(--radius-sm);"></div>
+              <div class="skeleton" style="height:18px;width:70px;border-radius:var(--radius-sm);"></div>
+            </div>
+            <div class="skeleton" style="height:14px;width:250px;border-radius:var(--radius-xs);"></div>
+            <div class="skeleton" style="height:12px;width:180px;border-radius:var(--radius-xs);"></div>
+          </div>
+        `).join('')}
+      </div>
+    `;
     const reports = await getReportsByUser(user.id);
     tabContent.innerHTML = '';
     if (reports.length === 0) {
