@@ -41,24 +41,51 @@ let _authReadyResolve;
 const _authReadyPromise = new Promise(resolve => { _authReadyResolve = resolve; });
 
 // Persistent auth listener — tracks login/logout throughout the session
-onAuthStateChanged(auth, async (user) => {
-    _currentUser = user;
-    if (user) {
-        try {
-            const snap = await getDoc(doc(db, COL.USERS, user.uid));
-            _currentUserDoc = snap.exists() ? { id: snap.id, ...snap.data() } : null;
-        } catch (err) {
-            console.warn('[Rentora] Could not fetch user doc:', err.message);
-            _currentUserDoc = null;
-        }
+try {
+    if (auth && typeof auth.onAuthStateChanged === 'function') {
+        auth.onAuthStateChanged(async (user) => {
+            _currentUser = user;
+            if (user) {
+                try {
+                    const snap = await getDoc(doc(db, COL.USERS, user.uid));
+                    _currentUserDoc = snap.exists() ? { id: snap.id, ...snap.data() } : null;
+                } catch (err) {
+                    _currentUserDoc = null;
+                }
+            } else {
+                _currentUserDoc = null;
+            }
+            if (!_authReady) {
+                _authReady = true;
+                _authReadyResolve();
+            }
+        });
     } else {
-        _currentUserDoc = null;
+        onAuthStateChanged(auth, async (user) => {
+            _currentUser = user;
+            if (user) {
+                try {
+                    const snap = await getDoc(doc(db, COL.USERS, user.uid));
+                    _currentUserDoc = snap.exists() ? { id: snap.id, ...snap.data() } : null;
+                } catch (err) {
+                    _currentUserDoc = null;
+                }
+            } else {
+                _currentUserDoc = null;
+            }
+            if (!_authReady) {
+                _authReady = true;
+                _authReadyResolve();
+            }
+        });
     }
-    if (!_authReady) {
-        _authReady = true;
-        _authReadyResolve();
-    }
-});
+} catch (e) {
+    console.warn('[Rentora] Auth listener skipped due to invalid Auth instance:', e.message);
+    _currentUser = null;
+    _currentUserDoc = null;
+    _authReady = true;
+    if (_authReadyResolve) _authReadyResolve();
+}
 
 // Timeout fallback — app loads even if Firebase Auth is unreachable
 setTimeout(() => {

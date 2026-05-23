@@ -2,8 +2,13 @@
 // Rentora — Dual-Mode Store (localStorage ↔ Firebase)
 // ============================================
 // Toggle USE_FIREBASE to switch between localStorage (dev/demo) and Firestore (production)
+// Dynamically falls back to localStorage if Firebase configuration is missing or invalid on host (e.g. Vercel)
+export let USE_FIREBASE = true;
 
-export const USE_FIREBASE = true;
+if (window.__firebaseConfigError) {
+    console.warn('[Rentora] Firebase credentials are not configured or contain invalid placeholders. Falling back to local storage offline demo mode!');
+    USE_FIREBASE = false;
+}
 
 import * as fb from './firebaseStore.js';
 
